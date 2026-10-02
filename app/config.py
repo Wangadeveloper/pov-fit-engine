@@ -7,10 +7,12 @@ class Config:
     PROJECT_NAME = "POV — Fit Intelligence Platform"
     SECRET_KEY = os.environ.get("JWT_SECRET", "supersecret_change_me_in_production")
     
-    # Use standard sqlite driver, not aiosqlite
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///../pov.db")
+    # Database configuration
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///pov.db")
     if SQLALCHEMY_DATABASE_URI.startswith("sqlite+aiosqlite"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("sqlite+aiosqlite", "sqlite")
+    if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
         
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
