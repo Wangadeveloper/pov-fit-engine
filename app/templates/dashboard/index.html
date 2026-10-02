@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>body { font-family: 'Inter', sans-serif; }</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-10 space-y-8">
+
+  <!-- Welcome -->
+  <div class="flex items-start justify-between gap-6">
+    <div>
+      <p class="text-sm text-gray-500 mb-1">Welcome back 👋</p>
+      <h1 class="text-3xl font-black text-gray-900">{{ current_user.email.split('@')[0] | title }}</h1>
+    </div>
+    <a href="{{ url_for('shop.index') }}"
+      class="flex-shrink-0 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity flex items-center gap-2">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+      Shop Now
+    </a>
+  </div>
+
+  {% if not profile or profile.profile_completeness < 0.5 %}
+  <!-- Onboarding CTA -->
+  <div class="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 text-white flex items-center justify-between gap-6">
+    <div>
+      <p class="text-sm font-semibold text-indigo-200 mb-1">⚡ Unlock Full POV Power</p>
+      <h2 class="text-xl font-bold mb-2">Set up your Fit Profile</h2>
+      <p class="text-indigo-200 text-sm max-w-sm">
+        Tell POV how you like to fit. We'll score every product in the shop just for you — and help you skip bad purchases forever.
+      </p>
+    </div>
+    <a href="{{ url_for('fit.onboarding') }}"
+      class="flex-shrink-0 bg-white text-indigo-700 px-6 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors whitespace-nowrap">
+      Get Started →
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">POV Confidence</p>
+      <p class="text-2xl font-black text-gray-900">
+        {% if profile %}{{ (profile.confidence * 100) | int }}%{% else %}–{% endif %}
+      </p>
+      <p class="text-xs text-gray-400 mt-1">{% if profile %}{{ profile.calibration_level | title }} calibration{% else %}Not set up{% endif %}</p>
+    </div>
+    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Wardrobe Items</p>
+      <p class="text-2xl font-black text-gray-900">{{ closet_count or 0 }}</p>
+      <p class="text-xs text-gray-400 mt-1">In your digital closet</p>
+    </div>
+    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Profile Score</p>
+      <p class="text-2xl font-black text-gray-900">
+        {% if profile %}{{ (profile.profile_completeness * 100) | int }}%{% else %}0%{% endif %}
+      </p>
+      <p class="text-xs text-gray-400 mt-1">Completeness</p>
+    </div>
+    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">VTO Ready</p>
+      <p class="text-2xl font-black text-gray-900">
+        {% if profile and profile.try_on_photo_url %}✓{% else %}–{% endif %}
+      </p>
+      <p class="text-xs text-gray-400 mt-1">Virtual try-on photo</p>
+    </div>
+  </div>
+
+  <!-- Quick Links -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <a href="{{ url_for('shop.index') }}" class="group bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3">
+      <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl">🛍️</div>
+      <div>
+        <p class="font-bold text-gray-900">Shop with POV</p>
+        <p class="text-sm text-gray-500 mt-0.5">Browse clothes with personalised fit scores</p>
+      </div>
+      <span class="text-indigo-600 text-sm font-semibold group-hover:underline">Browse Shop →</span>
+    </a>
+
+    <a href="{{ url_for('closet.index') }}" class="group bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3">
+      <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-2xl">👗</div>
+      <div>
+        <p class="font-bold text-gray-900">Your Wardrobe</p>
+        <p class="text-sm text-gray-500 mt-0.5">Items you own, tried on, or saved</p>
+      </div>
+      <span class="text-emerald-600 text-sm font-semibold group-hover:underline">View Wardrobe →</span>
+    </a>
+
+    <a href="{{ url_for('fit.onboarding') }}" class="group bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3">
+      <div class="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center text-2xl">⚙️</div>
+      <div>
+        <p class="font-bold text-gray-900">Fit Profile</p>
+        <p class="text-sm text-gray-500 mt-0.5">Update your preferences & measurements</p>
+      </div>
+      <span class="text-violet-600 text-sm font-semibold group-hover:underline">Edit Profile →</span>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

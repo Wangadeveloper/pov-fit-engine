@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}POV - Home{% endblock %}
+
+{% block content %}
+<div class="text-center py-20">
+    <h1 class="text-5xl font-extrabold tracking-tight text-gray-900 sm:text-6xl mb-6">
+        Fit Intelligence Platform
+    </h1>
+    <p class="mt-4 text-xl text-gray-500 max-w-3xl mx-auto mb-10">
+        Your personalized wardrobe, powered by intelligence. See how clothes fit before you buy them.
+    </p>
+    <div class="flex justify-center gap-4">
+        <a href="{{ url_for('auth.register') }}" class="bg-black text-white hover:bg-gray-800 px-8 py-3 rounded-md text-lg font-medium">Get Started</a>
+        <a href="{{ url_for('auth.login') }}" class="bg-white text-black border border-gray-300 hover:bg-gray-50 px-8 py-3 rounded-md text-lg font-medium">Log In</a>
+    </div>
+</div>
+{% endblock %}

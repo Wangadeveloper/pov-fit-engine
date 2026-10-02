@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+
+  .stat-card {
+    background: #fff; border-radius: 20px; padding: 24px 28px;
+    border: 1px solid #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  .progress-ring { transform: rotate(-90deg); }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2.5px dashed #d1d5db; border-radius: 20px;
+    padding: 0; text-align: center; cursor: pointer;
+    transition: all 0.2s ease; background: #fafafa;
+    position: relative; overflow: hidden; min-height: 220px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 0;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: #6366f1; background: #f5f3ff;
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.1);
+  }
+  .upload-zone.has-photo {
+    border-style: solid; border-color: #10b981; background: #f0fdf4;
+    padding: 0;
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-preview {
+    width: 100%; height: 260px; object-fit: cover;
+    border-radius: 18px; display: block;
+  }
+  .upload-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+    border-radius: 18px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .upload-zone:hover .upload-overlay { opacity: 1; }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 22px; height: 22px; border: 2.5px solid rgba(99,102,241,0.25);
+    border-top-color: #6366f1; border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Upload progress bar ── */
+  .upload-progress { height: 3px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .upload-progress-fill {
+    height: 100%; background: linear-gradient(to right, #6366f1, #8b5cf6);
+    border-radius: 999px; width: 0%; transition: width 0.3s ease;
+  }
+
+  .vto-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #d1fae5; color: #065f46; padding: 5px 12px;
+    border-radius: 999px; font-size: 12px; font-weight: 600;
+  }
+  .vto-badge-off {
+    background: #f3f4f6; color: #6b7280;
+  }
+
+  /* ── URL fallback row ── */
+  .url-toggle { font-size: 12px; color: #6b7280; cursor: pointer; text-decoration: underline; }
+  .url-toggle:hover { color: #4338ca; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-10 space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-black text-gray-900">Your POV Profile</h1>
+      <p class="text-gray-500 text-sm mt-1">{{ current_user.email }}</p>
+    </div>
+    <a href="{{ url_for('fit.onboarding') }}"
+      class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      Edit Fit Profile
+    </a>
+  </div>
+
+  <!-- POV Passport Card -->
+  {% if profile %}
+  <div class="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl p-6 text-white">
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <p class="text-xs font-semibold text-indigo-300 uppercase tracking-widest mb-1">POV Fit Passport</p>
+        <p class="text-lg font-bold">{{ current_user.email.split('@')[0] | title }}</p>
+        <p class="text-indigo-300 text-sm">{{ profile.calibration_level | title }} Calibration</p>
+      </div>
+      <div class="relative w-16 h-16">
+        <svg width="64" height="64" class="progress-ring" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="6"/>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="#818cf8" stroke-width="6"
+            stroke-linecap="round"
+            stroke-dasharray="163"
+            stroke-dashoffset="{{ 163 - (163 * profile.profile_completeness) | int }}"/>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center text-sm font-bold">
+          {{ (profile.profile_completeness * 100) | int }}%
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <p class="text-xs text-indigo-300 mb-1">Tops</p>
+        <p class="font-semibold capitalize">{{ profile.preferred_top_fit }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-indigo-300 mb-1">Bottoms</p>
+        <p class="font-semibold capitalize">{{ profile.preferred_bottom_fit }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-indigo-300 mb-1">Confidence</p>
+        <p class="font-semibold">{{ (profile.confidence * 100) | int }}%</p>
+      </div>
+    </div>
+
+    {% if profile.comfort_preferences %}
+    <div class="mt-4 pt-4 border-t border-white/10">
+      <p class="text-xs text-indigo-300 mb-2">Style Preferences</p>
+      <div class="flex flex-wrap gap-2">
+        {% for pref in profile.comfort_preferences %}
+        <span class="bg-white/10 text-white text-xs px-3 py-1 rounded-full">{{ pref }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ══════════════════════════════════════
+       Virtual Try-On Photo Upload
+  ══════════════════════════════════════ -->
+  <div class="stat-card">
+    <div class="flex items-center justify-between mb-1">
+      <h2 class="font-bold text-gray-900">📸 Virtual Try-On Photo</h2>
+      <span id="vtoBadge" class="vto-badge {% if not profile.try_on_photo_url %}vto-badge-off{% endif %}">
+        {% if profile.try_on_photo_url %}
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          Try-On Ready
+        {% else %}
+          No Photo Yet
+        {% endif %}
+      </span>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">Upload a full-body photo so POV can show clothes on you in the Virtual Try-On.</p>
+
+    <!-- Upload zone -->
+    <div class="upload-zone {% if profile.try_on_photo_url %}has-photo{% endif %}" id="uploadZone"
+         ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+      <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp,image/gif"
+             onchange="handleFileChange(event)">
+
+      {% if profile.try_on_photo_url %}
+        <img src="{{ profile.try_on_photo_url }}" alt="Your try-on photo" class="upload-preview" id="photoPreview">
+        <div class="upload-overlay">
+          <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <p class="text-white text-sm font-semibold">Change Photo</p>
+        </div>
+      {% else %}
+        <img src="" alt="" class="upload-preview hidden" id="photoPreview">
+        <div id="uploadPlaceholder" class="flex flex-col items-center gap-3 py-8 px-4">
+          <div class="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center">
+            <svg class="w-8 h-8 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+            </svg>
+          </div>
+          <div>
+            <p class="font-semibold text-gray-700">Click or drag a photo here</p>
+            <p class="text-sm text-gray-400 mt-1">JPG, PNG, WebP · Max 10 MB · Full-body works best</p>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Upload progress -->
+    <div class="upload-progress mt-3 hidden" id="uploadProgressBar">
+      <div class="upload-progress-fill" id="uploadProgressFill"></div>
+    </div>
+
+    <!-- Status message -->
+    <p id="uploadMsg" class="text-xs mt-2 hidden"></p>
+
+    <!-- Uploading spinner -->
+    <div id="uploadingState" class="hidden flex items-center gap-2 mt-3">
+      <div class="spinner"></div>
+      <span class="text-sm text-gray-500">Uploading…</span>
+    </div>
+
+    <!-- URL fallback toggle -->
+    <div class="mt-4 pt-4 border-t border-gray-100">
+      <p class="text-xs text-gray-400 mb-2">Prefer to paste a URL instead?
+        <span class="url-toggle" onclick="document.getElementById('urlFallback').classList.toggle('hidden')">Toggle URL input</span>
+      </p>
+      <div id="urlFallback" class="hidden flex gap-3">
+        <input type="url" id="photoUrlInput" placeholder="https://example.com/full-body-photo.jpg"
+          value="{{ profile.try_on_photo_url or '' }}"
+          class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <button onclick="savePhotoUrl()"
+          class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
+          Save URL
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- No profile yet -->
+  <div class="stat-card text-center py-12">
+    <div class="text-5xl mb-4">👕</div>
+    <h2 class="font-bold text-gray-900 text-xl mb-2">Set up your Fit Profile</h2>
+    <p class="text-gray-500 mb-6">Tell POV how you like to fit, and we'll score every item in the shop for you.</p>
+    <a href="{{ url_for('fit.onboarding') }}"
+      class="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity">
+      Get Started →
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+// ── Drag & Drop ───────────────────────────────────────────────────────────────
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  document.getElementById('uploadZone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+}
+function handleFileChange(e) {
+  const file = e.target.files[0];
+  if (file) uploadFile(file);
+}
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+function uploadFile(file) {
+  // Validate type client-side
+  if (!file.type.match(/^image\/(jpeg|png|webp|gif)$/)) {
+    showMsg('Invalid file type. Please upload a JPG, PNG, or WebP image.', 'error');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showMsg('File too large. Maximum size is 10 MB.', 'error');
+    return;
+  }
+
+  // Show preview immediately
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const preview = document.getElementById('photoPreview');
+    const placeholder = document.getElementById('uploadPlaceholder');
+    preview.src = ev.target.result;
+    preview.classList.remove('hidden');
+    if (placeholder) placeholder.classList.add('hidden');
+    document.getElementById('uploadZone').classList.add('has-photo');
+  };
+  reader.readAsDataURL(file);
+
+  // Show uploading state
+  document.getElementById('uploadingState').classList.remove('hidden');
+  const progressBar = document.getElementById('uploadProgressBar');
+  const progressFill = document.getElementById('uploadProgressFill');
+  progressBar.classList.remove('hidden');
+
+  // Animate progress (simulated — XHR gives real progress)
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/profile/api/upload-photo');
+
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 90); // cap at 90% until server responds
+      progressFill.style.width = pct + '%';
+    }
+  };
+
+  xhr.onload = () => {
+    progressFill.style.width = '100%';
+    document.getElementById('uploadingState').classList.add('hidden');
+    setTimeout(() => progressBar.classList.add('hidden'), 600);
+
+    try {
+      const json = JSON.parse(xhr.responseText);
+      if (json.success) {
+        showMsg('✓ ' + json.message, 'success');
+        updateBadge(true);
+      } else {
+        showMsg(json.error || 'Upload failed. Please try again.', 'error');
+      }
+    } catch {
+      showMsg('Upload failed. Please try again.', 'error');
+    }
+  };
+
+  xhr.onerror = () => {
+    document.getElementById('uploadingState').classList.add('hidden');
+    progressBar.classList.add('hidden');
+    showMsg('Network error. Please try again.', 'error');
+  };
+
+  xhr.send(formData);
+}
+
+// ── URL fallback ──────────────────────────────────────────────────────────────
+function savePhotoUrl() {
+  const url = document.getElementById('photoUrlInput').value.trim();
+  if (!url) { showMsg('Please enter a valid URL.', 'error'); return; }
+
+  fetch('/profile/api/upload-photo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ photo_url: url })
+  })
+  .then(r => r.json())
+  .then(json => {
+    if (json.success) {
+      showMsg('✓ ' + json.message, 'success');
+      updateBadge(true);
+      // Show preview
+      const preview = document.getElementById('photoPreview');
+      if (preview) { preview.src = url; preview.classList.remove('hidden'); }
+      document.getElementById('uploadZone').classList.add('has-photo');
+    } else {
+      showMsg(json.error, 'error');
+    }
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showMsg(text, type) {
+  const el = document.getElementById('uploadMsg');
+  el.textContent = text;
+  el.className = 'text-xs mt-2 ' + (type === 'success' ? 'text-green-600' : 'text-red-500');
+  el.classList.remove('hidden');
+  if (type === 'success') setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+function updateBadge(ready) {
+  const badge = document.getElementById('vtoBadge');
+  if (ready) {
+    badge.className = 'vto-badge';
+    badge.innerHTML = `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Try-On Ready`;
+  } else {
+    badge.className = 'vto-badge vto-badge-off';
+    badge.textContent = 'No Photo Yet';
+  }
+}
+</script>
+{% endblock %}

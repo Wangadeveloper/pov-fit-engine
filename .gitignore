@@ -1,0 +1,13 @@
+venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.db
+instance/
+.DS_Store
+*.log
+static/uploads/user_photos/*
+!static/uploads/user_photos/.gitkeep

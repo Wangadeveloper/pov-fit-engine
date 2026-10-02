@@ -1,0 +1,732 @@
+{% extends "base.html" %}
+{% block title %}Shop{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+
+  /* === POV Score Ring === */
+  .score-ring { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring .ring-bg { stroke: #e5e7eb; }
+  .score-ring .ring-fill {
+    stroke-dasharray: 138; stroke-dashoffset: 138;
+    transition: stroke-dashoffset 1s ease; stroke-linecap: round;
+  }
+  .score-ring .score-text {
+    position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #111;
+  }
+
+  /* === Card === */
+  .product-card {
+    background: #fff; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    display: flex; flex-direction: column;
+  }
+  .product-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateY(-2px); }
+
+  .card-img-wrap { position: relative; aspect-ratio: 3/4; overflow: hidden; background: #f3f4f6; }
+  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+  .product-card:hover .card-img-wrap img { transform: scale(1.04); }
+
+  .card-badge {
+    position: absolute; top: 10px; left: 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff; font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 999px; letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* === POV Analysis Panel === */
+  .pov-panel {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .pov-panel.open { display: flex; }
+  .pov-box {
+    background: #fff; border-radius: 24px; width: 100%; max-width: 520px;
+    max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: translateY(0); } }
+
+  /* === VTO Panel === */
+  .vto-panel {
+    display: none; position: fixed; inset: 0; z-index: 1100;
+    background: #000; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .vto-panel.open { display: flex; }
+
+  /* === Confidence Bar === */
+  .conf-bar { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 999px; transition: width 1.2s ease; }
+
+  /* === Fit prediction badges === */
+  .fit-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 999px; }
+  .fit-good { background: #d1fae5; color: #065f46; }
+  .fit-tight { background: #fee2e2; color: #991b1b; }
+  .fit-loose { background: #fef3c7; color: #92400e; }
+
+  /* === Buttons === */
+  .btn-pov {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff; border: none; border-radius: 10px;
+    padding: 9px 14px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: opacity 0.2s ease; width: 100%; justify-content: center;
+  }
+  .btn-pov:hover { opacity: 0.9; }
+  .btn-pov:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-vto {
+    background: #111; color: #fff; border: none; border-radius: 10px;
+    padding: 9px 14px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: opacity 0.2s ease; width: 100%; justify-content: center;
+  }
+  .btn-vto:hover { opacity: 0.85; }
+
+  .btn-cart {
+    background: #fff; color: #111; border: 1.5px solid #e5e7eb; border-radius: 10px;
+    padding: 9px 14px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s ease; width: 100%; justify-content: center;
+  }
+  .btn-cart:hover { border-color: #111; background: #f9fafb; }
+
+  /* Spinner */
+  .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  .spinner-dark { border-color: rgba(0,0,0,0.15); border-top-color: #6366f1; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Hero */
+  .shop-hero {
+    background: linear-gradient(135deg, #0f0f0f 0%, #1e1b4b 50%, #0f0f0f 100%);
+    padding: 60px 0 50px; margin-bottom: 40px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="-mt-8 -mx-4 sm:-mx-6 lg:-mx-8">
+
+  <!-- Hero -->
+  <div class="shop-hero text-center px-4">
+    <p class="text-xs font-semibold tracking-widest text-indigo-400 uppercase mb-3">Powered by POV Intelligence</p>
+    <h1 class="text-4xl sm:text-5xl font-black text-white mb-4 leading-tight">
+      Clothes that <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">know you.</span>
+    </h1>
+    <p class="text-gray-400 text-lg max-w-xl mx-auto">
+      Every item is scored for <em>your</em> fit preferences. Click <strong class="text-white">Fit with POV</strong> to get your personal analysis.
+    </p>
+  </div>
+
+  <div class="px-4 sm:px-6 lg:px-8 pb-16">
+
+    <!-- Product Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {% for product in products %}
+      {% set pid = product.id | string %}
+      {% set rec = pov_scores.get(pid) %}
+      <div class="product-card">
+
+        <!-- Image -->
+        <div class="card-img-wrap">
+          {% if rec %}
+            <span class="card-badge">✦ POV Ready</span>
+          {% endif %}
+          {% if product.image_url %}
+            <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+          {% else %}
+            <div class="flex items-center justify-center h-full text-gray-300">
+              <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Info -->
+        <div class="p-4 flex flex-col gap-3 flex-grow">
+          <div>
+            <p class="text-xs text-gray-400 font-medium mb-0.5">{{ product.brand.name if product.brand else 'Unknown Brand' }}</p>
+            <h2 class="font-semibold text-gray-900 text-sm leading-tight">{{ product.name }}</h2>
+            <p class="text-gray-500 text-xs mt-1">{{ product.category }}{% if product.subcategory %} · {{ product.subcategory }}{% endif %}</p>
+          </div>
+
+          <!-- POV Score (pre-computed) -->
+          {% if rec %}
+          <div class="flex items-center gap-3 bg-indigo-50 rounded-xl px-3 py-2.5">
+            <!-- Score Ring -->
+            <div class="score-ring" data-score="{{ (rec.fit_score) | int }}">
+              <svg width="52" height="52" viewBox="0 0 52 52">
+                <circle class="ring-bg" cx="26" cy="26" r="22" fill="none" stroke-width="5"/>
+                <circle class="ring-fill" cx="26" cy="26" r="22" fill="none" stroke-width="5"
+                  stroke="{{ '#10b981' if rec.fit_score >= 80 else '#f59e0b' if rec.fit_score >= 60 else '#ef4444' }}"
+                  style="stroke-dashoffset: {{ 138 - (138 * rec.fit_score / 100) | int }}"/>
+              </svg>
+              <div class="score-text">{{ (rec.fit_score) | int }}%</div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-indigo-800">POV Fit Score</p>
+              <p class="text-xs text-indigo-600 truncate">Size {{ rec.recommended_size }} · {{ (rec.confidence * 100) | int }}% confidence</p>
+              <p class="text-xs text-gray-500 mt-0.5 truncate">{{ rec.reason }}</p>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Price -->
+          <div class="flex items-center justify-between">
+            <span class="text-lg font-bold text-gray-900">${{ "%.2f" | format(product.price) }}</span>
+            <span class="text-xs text-gray-400 uppercase tracking-wide">{{ product.currency }}</span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-2 mt-auto">
+            {% if current_user.is_authenticated %}
+              <button
+                class="btn-pov"
+                onclick="openFitPanel('{{ pid }}', '{{ product.name | e }}', '{{ product.image_url or '' }}', '{{ product.category | e }}')"
+                id="btn-pov-{{ pid }}">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                Fit with POV
+              </button>
+              <button
+                class="btn-vto"
+                onclick="startVTO('{{ pid }}', '{{ product.name | e }}', '{{ product.image_url or '' }}', '{{ product.category | e }}')">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82V15.18a1 1 0 01-1.447.894L15 14M3 8.5A1.5 1.5 0 014.5 7h8A1.5 1.5 0 0114 8.5v7A1.5 1.5 0 0112.5 17h-8A1.5 1.5 0 013 15.5v-7z"/>
+                </svg>
+                Virtual Try-On
+              </button>
+            {% endif %}
+            <button class="btn-cart">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2 5h14M9 20a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"/>
+              </svg>
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-span-full text-center py-20 text-gray-400">
+        <p class="text-lg">No products in the shop yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     FIT WITH POV PANEL (modal)
+══════════════════════════════════════ -->
+<div class="pov-panel" id="povPanel" onclick="closePovPanelOutside(event)">
+  <div class="pov-box" id="povBox">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-bold text-gray-900 text-sm">Fit with POV</p>
+          <p class="text-xs text-gray-400" id="povProductName">Analysing…</p>
+        </div>
+      </div>
+      <button onclick="closePovPanel()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+        <svg class="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Loading state -->
+    <div id="povLoading" class="p-10 flex flex-col items-center gap-4">
+      <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+        <div class="spinner spinner-dark"></div>
+      </div>
+      <div class="text-center">
+        <p class="font-semibold text-gray-800">POV is analysing your fit…</p>
+        <p class="text-sm text-gray-400 mt-1">Checking your size history, brand data & preferences</p>
+      </div>
+    </div>
+
+    <!-- Result state -->
+    <div id="povResult" class="hidden p-6 space-y-5">
+
+      <!-- Score hero -->
+      <div class="flex items-center gap-5 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl p-5">
+        <div class="score-ring w-20 h-20 flex-shrink-0" style="width:80px;height:80px">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="33" fill="none" stroke="#e5e7eb" stroke-width="7"/>
+            <circle id="bigRingFill" cx="40" cy="40" r="33" fill="none" stroke-width="7"
+              stroke="#6366f1" stroke-linecap="round"
+              style="stroke-dasharray:207; stroke-dashoffset:207; transform-origin:center; transform:rotate(-90deg); transition:stroke-dashoffset 1.2s ease;"/>
+          </svg>
+          <div class="score-text" id="bigScoreText" style="font-size:15px">-</div>
+        </div>
+        <div>
+          <p class="text-2xl font-black text-gray-900" id="resultScore">–%</p>
+          <p class="text-sm font-semibold text-indigo-700">Fit Score</p>
+          <p class="text-xs text-gray-500 mt-1">
+            Recommended size: <strong id="resultSize" class="text-gray-900">–</strong>
+          </p>
+          <div class="mt-2">
+            <p class="text-xs text-gray-500 mb-1">Confidence: <span id="resultConfPct" class="font-semibold text-gray-700">–</span></p>
+            <div class="conf-bar w-40">
+              <div class="conf-fill bg-indigo-500" id="resultConfBar" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reason -->
+      <div class="bg-gray-50 rounded-xl px-4 py-3">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">POV Says</p>
+        <p id="resultReason" class="text-sm text-gray-700"></p>
+      </div>
+
+      <!-- Fit predictions -->
+      <div>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Body Region Predictions</p>
+        <div id="fitPredictions" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Explanations -->
+      <div>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">How We Got Here</p>
+        <ul id="resultExplanations" class="space-y-1.5"></ul>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-3 pt-2">
+        <button id="panelVTOBtn" class="btn-vto flex-1 text-xs py-2.5" onclick="startVTOFromPanel()">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82V15.18a1 1 0 01-1.447.894L15 14M3 8.5A1.5 1.5 0 014.5 7h8A1.5 1.5 0 0114 8.5v7A1.5 1.5 0 0112.5 17h-8A1.5 1.5 0 013 15.5v-7z"/></svg>
+          Try It On
+        </button>
+        <button class="btn-cart flex-1 text-xs py-2.5" onclick="closePovPanel()">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2 5h14M9 20a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"/></svg>
+          Add to Cart
+        </button>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div id="povError" class="hidden p-8 text-center">
+      <p class="text-4xl mb-3">🤔</p>
+      <p class="font-semibold text-gray-800">Couldn't analyse fit</p>
+      <p id="povErrorMsg" class="text-sm text-gray-500 mt-1">Please add some items to your wardrobe so POV can learn your preferences.</p>
+      <a href="{{ url_for('fit.onboarding') }}" class="inline-block mt-4 text-sm text-indigo-600 font-semibold hover:underline">Set up your Fit Profile →</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     VIRTUAL TRY-ON PANEL (full-screen)
+══════════════════════════════════════ -->
+<div class="vto-panel" id="vtoPanel">
+  <!-- Top bar -->
+  <div class="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-10">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82V15.18a1 1 0 01-1.447.894L15 14M3 8.5A1.5 1.5 0 014.5 7h8A1.5 1.5 0 0114 8.5v7A1.5 1.5 0 0112.5 17h-8A1.5 1.5 0 013 15.5v-7z"/></svg>
+      </div>
+      <div>
+        <p class="text-white font-semibold text-sm">Virtual Try-On</p>
+        <p class="text-white/50 text-xs" id="vtoProductName">POV AI Try-On</p>
+      </div>
+    </div>
+    <button onclick="closeVTO()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+      <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- VTO content -->
+  <div class="flex flex-col items-center justify-center gap-6 w-full px-4 pt-20 pb-28">
+
+    <!-- Loading -->
+    <div id="vtoLoading" class="flex flex-col items-center gap-4 text-center">
+      <div class="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+        <div class="spinner"></div>
+      </div>
+      <p class="text-white font-semibold">Preparing your try-on…</p>
+      <p class="text-white/50 text-sm">POV AI is placing the garment on you</p>
+    </div>
+
+    <!-- Result -->
+    <div id="vtoResult" class="hidden flex-col items-center gap-4 w-full max-w-md">
+      <!-- Composite try-on display -->
+      <div id="vtoComposite" class="relative w-full rounded-2xl overflow-hidden bg-gray-900" style="min-height: 360px; max-height: 65vh;">
+        <!-- User photo background -->
+        <img id="vtoUserPhoto" src="" alt="You" class="w-full h-full object-cover" style="max-height:65vh;">
+        <!-- Garment overlay (sandbox mode) -->
+        <div id="vtoGarmentOverlay" class="hidden absolute inset-0 flex items-start justify-center pt-16 pb-8 px-4">
+          <img id="vtoGarmentImg" src="" alt="Garment" class="max-h-full max-w-xs rounded-xl shadow-2xl" style="max-height:55%;object-fit:contain;filter:drop-shadow(0 8px 32px rgba(0,0,0,0.6));">
+        </div>
+        <!-- Full result (live API) -->
+        <img id="vtoResultImg" src="" alt="Virtual Try-On Result" class="hidden w-full h-full object-cover absolute inset-0" style="max-height:65vh;">
+      </div>
+      <div id="vtoSandboxNote" class="hidden text-center text-xs text-yellow-200/80 bg-yellow-400/10 border border-yellow-400/20 px-4 py-2.5 rounded-xl w-full">
+        👁 Preview mode — your photo + garment composited. For full AI try-on, connect a YouCam API key.
+      </div>
+    </div>
+
+    <!-- Upload photo prompt (inline in panel) -->
+    <div id="vtoUploadPrompt" class="hidden flex-col items-center gap-5 text-center max-w-sm w-full">
+      <div class="text-5xl">📸</div>
+      <div>
+        <p class="text-white font-bold text-xl mb-2">Upload your photo first</p>
+        <p class="text-white/50 text-sm">Add a full-body photo to see clothes on you in Try-On.</p>
+      </div>
+
+      <!-- Inline upload area -->
+      <label id="vtoUploadZone"
+        class="w-full border-2 border-dashed border-white/30 rounded-2xl p-8 cursor-pointer hover:border-indigo-400 hover:bg-white/5 transition-all flex flex-col items-center gap-3">
+        <input type="file" id="vtoPhotoFileInput" accept="image/jpeg,image/png,image/webp" class="sr-only"
+               onchange="uploadVTOPhoto(event)">
+        <svg class="w-10 h-10 text-white/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <div>
+          <p class="text-white font-semibold">Click to choose a photo</p>
+          <p class="text-white/40 text-xs mt-1">JPG, PNG, WebP · Full-body photo works best</p>
+        </div>
+      </label>
+
+      <!-- Upload progress -->
+      <div id="vtoUploadProgress" class="hidden w-full">
+        <div class="h-1 bg-white/10 rounded-full overflow-hidden">
+          <div id="vtoUploadFill" class="h-full bg-indigo-400 rounded-full transition-all" style="width:0%"></div>
+        </div>
+        <p id="vtoUploadStatus" class="text-white/50 text-xs mt-2 text-center">Uploading…</p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="vtoError" class="hidden text-center">
+      <p class="text-red-400 font-semibold" id="vtoErrorMsg">Try-on failed. Please try again.</p>
+    </div>
+  </div>
+
+  <!-- Bottom action bar (when result is ready) -->
+  <div id="vtoActionBar" class="hidden absolute bottom-0 left-0 right-0 px-4 py-5 bg-gradient-to-t from-black to-transparent flex gap-3">
+    <button id="vtoAddWardrobeBtn" onclick="addToWardrobe()" class="flex-1 bg-white text-black rounded-xl py-3.5 font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors">
+      👗 Add to Wardrobe
+    </button>
+    <button class="flex-1 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl py-3.5 font-bold text-sm flex items-center justify-center gap-2">
+      🛒 Add to Cart
+    </button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let currentProductId = null;
+let currentProductName = '';
+let currentProductImg = '';
+let currentProductCategory = '';
+let currentPovResult = null;
+
+// ══════════════════════════════════════
+// FIT WITH POV
+// ══════════════════════════════════════
+function openFitPanel(pid, name, img, category) {
+  currentProductId = pid;
+  currentProductName = name;
+  currentProductImg = img;
+  currentProductCategory = category;
+
+  document.getElementById('povProductName').textContent = name;
+  document.getElementById('povLoading').classList.remove('hidden');
+  document.getElementById('povResult').classList.add('hidden');
+  document.getElementById('povError').classList.add('hidden');
+  document.getElementById('povPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  fetch(`/shop/api/fit-analysis/${pid}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  .then(r => r.json())
+  .then(json => {
+    document.getElementById('povLoading').classList.add('hidden');
+    if (json.success) {
+      renderPovResult(json.data);
+    } else {
+      document.getElementById('povErrorMsg').textContent = json.error || 'Unable to analyse fit.';
+      document.getElementById('povError').classList.remove('hidden');
+    }
+  })
+  .catch(() => {
+    document.getElementById('povLoading').classList.add('hidden');
+    document.getElementById('povErrorMsg').textContent = 'Network error. Please try again.';
+    document.getElementById('povError').classList.remove('hidden');
+  });
+}
+
+function renderPovResult(data) {
+  currentPovResult = data;
+  const score = Math.round(data.fit_score);
+  const conf = Math.round(data.confidence * 100);
+
+  // Score ring
+  document.getElementById('resultScore').textContent = score + '%';
+  document.getElementById('bigScoreText').textContent = score + '%';
+  const ringFill = document.getElementById('bigRingFill');
+  const circumference = 207;
+  ringFill.style.strokeDashoffset = circumference - (circumference * score / 100);
+  const ringColor = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444';
+  ringFill.style.stroke = ringColor;
+
+  document.getElementById('resultSize').textContent = data.recommended_size;
+  document.getElementById('resultConfPct').textContent = conf + '%';
+  document.getElementById('resultConfBar').style.width = conf + '%';
+  document.getElementById('resultReason').textContent = data.reason;
+
+  // Fit predictions
+  const predsDiv = document.getElementById('fitPredictions');
+  predsDiv.innerHTML = '';
+  const labelMap = { good: ['✓ Good', 'fit-good'], slightly_tight: ['↔ Slightly Tight', 'fit-tight'], slightly_loose: ['↔ Slightly Loose', 'fit-loose'] };
+  for (const [region, val] of Object.entries(data.fit_prediction || {})) {
+    const [label, cls] = labelMap[val] || ['• ' + val, 'fit-good'];
+    predsDiv.innerHTML += `<span class="fit-badge ${cls}">${region}: ${label}</span>`;
+  }
+
+  // Explanations
+  const exList = document.getElementById('resultExplanations');
+  exList.innerHTML = '';
+  for (const ex of (data.explanation || [])) {
+    exList.innerHTML += `<li class="flex items-start gap-2 text-xs text-gray-600"><span class="text-indigo-400 mt-0.5 flex-shrink-0">•</span><span>${ex}</span></li>`;
+  }
+
+  document.getElementById('povResult').classList.remove('hidden');
+}
+
+function closePovPanel() {
+  document.getElementById('povPanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closePovPanelOutside(e) {
+  if (e.target === document.getElementById('povPanel')) closePovPanel();
+}
+
+function startVTOFromPanel() {
+  closePovPanel();
+  startVTO(currentProductId, currentProductName, currentProductImg, currentProductCategory);
+}
+
+// Track user photo for composite display
+let vtoCurrentTaskId = null;
+let vtoPollInterval = null;
+let vtoUserPhotoUrl = null;
+
+function startVTO(pid, name, img, category) {
+  currentProductId = pid;
+  currentProductName = name;
+  currentProductImg = img;
+  currentProductCategory = category;
+
+  document.getElementById('vtoProductName').textContent = name;
+  document.getElementById('vtoLoading').classList.remove('hidden');
+  document.getElementById('vtoResult').classList.add('hidden');
+  document.getElementById('vtoUploadPrompt').classList.add('hidden');
+  document.getElementById('vtoError').classList.add('hidden');
+  document.getElementById('vtoActionBar').classList.add('hidden');
+  document.getElementById('vtoPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  fetch(`/shop/api/virtual-tryon/${pid}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  })
+  .then(r => r.json())
+  .then(json => {
+    if (!json.success) {
+      document.getElementById('vtoLoading').classList.add('hidden');
+      if (json.action === 'upload_photo') {
+        // Show inline upload prompt — do NOT navigate away
+        document.getElementById('vtoUploadPrompt').style.display = 'flex';
+        document.getElementById('vtoUploadPrompt').classList.remove('hidden');
+      } else {
+        document.getElementById('vtoErrorMsg').textContent = json.error;
+        document.getElementById('vtoError').classList.remove('hidden');
+      }
+      return;
+    }
+
+    vtoCurrentTaskId = json.task_id;
+    vtoUserPhotoUrl = json.user_photo_url || null;
+
+    if (json.status === 'success' || json.sandbox) {
+      showVTOResult(json.result_url || json.garment_image_url, vtoUserPhotoUrl, json.sandbox, json.sandbox_note);
+    } else {
+      pollVTOStatus(json.task_id, json.garment_image_url);
+    }
+  })
+  .catch(() => {
+    document.getElementById('vtoLoading').classList.add('hidden');
+    document.getElementById('vtoErrorMsg').textContent = 'Connection error. Please try again.';
+    document.getElementById('vtoError').classList.remove('hidden');
+  });
+}
+
+function pollVTOStatus(taskId, fallbackImg) {
+  let attempts = 0;
+  vtoPollInterval = setInterval(() => {
+    attempts++;
+    if (attempts > 30) {
+      clearInterval(vtoPollInterval);
+      showVTOResult(fallbackImg, vtoUserPhotoUrl, true, 'Generation took longer than expected — showing preview.');
+      return;
+    }
+    fetch(`/shop/api/virtual-tryon/status/${taskId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'success' && data.result_url) {
+          clearInterval(vtoPollInterval);
+          showVTOResult(data.result_url, vtoUserPhotoUrl, false);
+        } else if (data.status === 'error') {
+          clearInterval(vtoPollInterval);
+          showVTOResult(fallbackImg, vtoUserPhotoUrl, true, data.message || 'Live AI try-on error — showing preview overlay.');
+        }
+      })
+      .catch(() => {
+        // Continue polling on transient network glitch
+      });
+  }, 2000);
+}
+
+// ── Inline VTO photo upload ───────────────────────────────────────────────────
+function uploadVTOPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const progressWrap = document.getElementById('vtoUploadProgress');
+  const progressFill = document.getElementById('vtoUploadFill');
+  const statusText = document.getElementById('vtoUploadStatus');
+
+  progressWrap.classList.remove('hidden');
+  statusText.textContent = 'Uploading…';
+
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/profile/api/upload-photo');
+
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      progressFill.style.width = Math.round((e.loaded / e.total) * 85) + '%';
+    }
+  };
+
+  xhr.onload = () => {
+    progressFill.style.width = '100%';
+    try {
+      const json = JSON.parse(xhr.responseText);
+      if (json.success) {
+        statusText.textContent = '✓ Photo uploaded!';
+        vtoUserPhotoUrl = json.photo_url;
+        // Auto-retry the try-on with the new photo
+        setTimeout(() => {
+          progressWrap.classList.add('hidden');
+          document.getElementById('vtoUploadPrompt').classList.add('hidden');
+          document.getElementById('vtoUploadPrompt').style.display = '';
+          startVTO(currentProductId, currentProductName, currentProductImg, currentProductCategory);
+        }, 800);
+      } else {
+        statusText.textContent = '✗ ' + (json.error || 'Upload failed.');
+        progressFill.style.width = '0%';
+      }
+    } catch {
+      statusText.textContent = '✗ Upload failed.';
+    }
+  };
+
+  xhr.onerror = () => { statusText.textContent = '✗ Network error.'; };
+  xhr.send(formData);
+}
+
+function showVTOResult(garmentUrl, userPhotoUrl, isSandbox, sandboxNote) {
+  document.getElementById('vtoLoading').classList.add('hidden');
+
+  if (isSandbox && userPhotoUrl) {
+    // Composite mode: show user photo + garment overlay
+    document.getElementById('vtoUserPhoto').src = userPhotoUrl;
+    document.getElementById('vtoGarmentImg').src = garmentUrl;
+    document.getElementById('vtoGarmentOverlay').classList.remove('hidden');
+    document.getElementById('vtoResultImg').classList.add('hidden');
+    document.getElementById('vtoSandboxNote').classList.remove('hidden');
+  } else if (isSandbox) {
+    // No user photo — just show the garment on its own
+    document.getElementById('vtoUserPhoto').src = garmentUrl;
+    document.getElementById('vtoGarmentOverlay').classList.add('hidden');
+    document.getElementById('vtoResultImg').classList.add('hidden');
+    document.getElementById('vtoSandboxNote').classList.remove('hidden');
+  } else {
+    // Live API result
+    document.getElementById('vtoResultImg').src = garmentUrl;
+    document.getElementById('vtoResultImg').classList.remove('hidden');
+    document.getElementById('vtoUserPhoto').src = userPhotoUrl || '';
+    document.getElementById('vtoGarmentOverlay').classList.add('hidden');
+    document.getElementById('vtoSandboxNote').classList.add('hidden');
+  }
+
+  document.getElementById('vtoResult').classList.remove('hidden');
+  document.getElementById('vtoActionBar').classList.remove('hidden');
+}
+
+function closeVTO() {
+  if (vtoPollInterval) { clearInterval(vtoPollInterval); vtoPollInterval = null; }
+  document.getElementById('vtoPanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ══════════════════════════════════════
+// ADD TO WARDROBE
+// ══════════════════════════════════════
+function addToWardrobe() {
+  const btn = document.getElementById('vtoAddWardrobeBtn');
+  const size = currentPovResult ? currentPovResult.recommended_size : 'M';
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+
+  fetch(`/shop/api/add-to-wardrobe/${currentProductId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ size_label: size, fit_rating: 'perfect' })
+  })
+  .then(r => r.json())
+  .then(json => {
+    if (json.success) {
+      btn.textContent = '✓ Added to Wardrobe!';
+      btn.classList.remove('bg-white', 'text-black');
+      btn.classList.add('bg-green-500', 'text-white');
+    } else {
+      btn.textContent = json.error || 'Already in wardrobe';
+      btn.disabled = false;
+    }
+  })
+  .catch(() => {
+    btn.textContent = 'Error. Try again.';
+    btn.disabled = false;
+  });
+}
+</script>
+{% endblock %}

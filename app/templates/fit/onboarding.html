@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Set Up Your Fit Profile{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .step-card {
+    background: #fff; border-radius: 20px; padding: 28px 32px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #f1f5f9;
+  }
+  .option-btn {
+    border: 2px solid #e5e7eb; border-radius: 12px; padding: 14px 16px;
+    cursor: pointer; transition: all 0.15s ease; background: #fff;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    text-align: center; font-size: 13px; color: #374151; font-weight: 500;
+  }
+  .option-btn:hover { border-color: #6366f1; background: #f5f3ff; }
+  .option-btn.selected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+  .option-btn .icon { font-size: 22px; }
+  .comfort-chip {
+    border: 1.5px solid #e5e7eb; border-radius: 999px; padding: 6px 14px;
+    font-size: 13px; cursor: pointer; transition: all 0.15s ease;
+    background: #fff; color: #374151; font-weight: 500;
+  }
+  .comfort-chip.selected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+  input[type=range] { accent-color: #6366f1; }
+  .progress-bar { height: 4px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(to right, #6366f1, #8b5cf6); border-radius: 999px; transition: width 0.4s ease; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-10">
+
+  <!-- Header -->
+  <div class="text-center mb-10">
+    <div class="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-xs font-semibold px-4 py-2 rounded-full mb-4">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      Set Up Your POV Fit Profile
+    </div>
+    <h1 class="text-3xl font-black text-gray-900 mb-3">How do you like to fit?</h1>
+    <p class="text-gray-500">POV uses this to score every item in the shop specifically for you.</p>
+
+    <!-- Progress -->
+    <div class="mt-6 progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    <p class="text-xs text-gray-400 mt-2" id="progressLabel">Step 1 of 4</p>
+  </div>
+
+  <form method="POST" id="onboardingForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+    <!-- Step 1: Tops -->
+    <div class="step-card mb-4" id="step1">
+      <h2 class="font-bold text-gray-900 mb-1">👕 How do you prefer your tops to fit?</h2>
+      <p class="text-sm text-gray-500 mb-5">T-shirts, shirts, hoodies, sweaters…</p>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {% for opt, icon, desc in [('fitted', '🤏', 'Fitted'), ('regular', '👕', 'Regular'), ('relaxed', '😌', 'Relaxed'), ('oversized', '🏄', 'Oversized')] %}
+        <label>
+          <input type="radio" name="preferred_top_fit" value="{{ opt }}" class="sr-only" {% if profile and profile.preferred_top_fit == opt %}checked{% endif %}>
+          <div class="option-btn {% if profile and profile.preferred_top_fit == opt %}selected{% endif %}" onclick="selectOpt(this, 'top')">
+            <span class="icon">{{ icon }}</span>
+            <span>{{ desc }}</span>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Step 2: Bottoms -->
+    <div class="step-card mb-4" id="step2">
+      <h2 class="font-bold text-gray-900 mb-1">👖 How do you prefer your bottoms to fit?</h2>
+      <p class="text-sm text-gray-500 mb-5">Jeans, trousers, shorts…</p>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {% for opt, icon, desc in [('skinny', '🦷', 'Skinny'), ('straight', '📏', 'Straight'), ('relaxed', '🛋️', 'Relaxed'), ('wide', '🌊', 'Wide Leg')] %}
+        <label>
+          <input type="radio" name="preferred_bottom_fit" value="{{ opt }}" class="sr-only" {% if profile and profile.preferred_bottom_fit == opt %}checked{% endif %}>
+          <div class="option-btn {% if profile and profile.preferred_bottom_fit == opt %}selected{% endif %}" onclick="selectOpt(this, 'bottom')">
+            <span class="icon">{{ icon }}</span>
+            <span>{{ desc }}</span>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Step 3: Jacket -->
+    <div class="step-card mb-4" id="step3">
+      <h2 class="font-bold text-gray-900 mb-1">🧥 How do you prefer your outerwear?</h2>
+      <p class="text-sm text-gray-500 mb-5">Jackets, blazers, coats…</p>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {% for opt, icon, desc in [('fitted', '🤏', 'Fitted'), ('regular', '🧥', 'Regular'), ('oversized', '🏄', 'Oversized')] %}
+        <label>
+          <input type="radio" name="preferred_jacket_fit" value="{{ opt }}" class="sr-only" {% if profile and profile.preferred_jacket_fit == opt %}checked{% endif %}>
+          <div class="option-btn {% if profile and profile.preferred_jacket_fit == opt %}selected{% endif %}" onclick="selectOpt(this, 'jacket')">
+            <span class="icon">{{ icon }}</span>
+            <span>{{ desc }}</span>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Step 4: Comfort + Measurements -->
+    <div class="step-card mb-6" id="step4">
+      <h2 class="font-bold text-gray-900 mb-1">🎯 What matters to you most?</h2>
+      <p class="text-sm text-gray-500 mb-4">Select all that apply.</p>
+      <div class="flex flex-wrap gap-2 mb-6">
+        {% for pref in ['Breathable Fabric', 'Stretch', 'No Ironing', 'Sustainable', 'Bold Colors', 'Classic Neutrals', 'Pockets', 'Easy Care'] %}
+        <label>
+          <input type="checkbox" name="comfort_preferences" value="{{ pref }}" class="sr-only"
+            {% if profile and pref in (profile.comfort_preferences or []) %}checked{% endif %}>
+          <span class="comfort-chip {% if profile and pref in (profile.comfort_preferences or []) %}selected{% endif %}"
+            onclick="toggleChip(this)">{{ pref }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <h2 class="font-bold text-gray-900 mb-1 mt-4">📐 Measurements (optional)</h2>
+      <p class="text-sm text-gray-500 mb-4">Helps POV give even more accurate size recommendations.</p>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Height (cm)</label>
+          <input type="number" name="height_cm" placeholder="e.g. 178"
+            value="{{ profile.height_cm if profile and profile.height_cm else '' }}"
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Weight (kg)</label>
+          <input type="number" name="weight_kg" placeholder="e.g. 75"
+            value="{{ profile.weight_kg if profile and profile.weight_kg else '' }}"
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        </div>
+      </div>
+    </div>
+
+    <button type="submit"
+      class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-4 rounded-xl font-bold text-base hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      Save My Fit Profile
+    </button>
+  </form>
+</div>
+
+<script>
+  function selectOpt(el, group) {
+    const parent = el.closest('.grid');
+    parent.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    // Check the sibling radio
+    el.closest('label').querySelector('input[type=radio]').checked = true;
+    updateProgress();
+  }
+
+  function toggleChip(el) {
+    el.classList.toggle('selected');
+    const cb = el.closest('label').querySelector('input[type=checkbox]');
+    cb.checked = el.classList.contains('selected');
+  }
+
+  function updateProgress() {
+    const tops = document.querySelector('input[name=preferred_top_fit]:checked');
+    const bottoms = document.querySelector('input[name=preferred_bottom_fit]:checked');
+    const jackets = document.querySelector('input[name=preferred_jacket_fit]:checked');
+    let done = [tops, bottoms, jackets].filter(Boolean).length;
+    const pct = Math.round((done / 4) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `Step ${Math.min(done + 1, 4)} of 4`;
+  }
+
+  updateProgress();
+</script>
+{% endblock %}
