@@ -1,0 +1,17 @@
+# Exported from Render on 2026-10-02T07:39:28Z
+version: "1"
+services:
+- type: web
+  name: pov-fit-engine
+  runtime: python
+  repo: https://github.com/Wangadeveloper/pov-fit-engine
+  plan: free
+  envVars:
+  - key: YOUCAM_API_BASE_URL
+    sync: false
+  - key: YOUCAM_API_KEY
+    sync: false
+  region: frankfurt
+  buildCommand: pip install -r requirements.txt
+  startCommand: gunicorn "run:create_app()"
+  autoDeployTrigger: commit
