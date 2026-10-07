@@ -160,11 +160,14 @@
             <p class="text-xs text-gray-400 font-medium mb-0.5">{{ product.brand.name if product.brand else 'Unknown Brand' }}</p>
             <h2 class="font-semibold text-gray-900 text-sm leading-tight">{{ product.name }}</h2>
             <p class="text-gray-500 text-xs mt-1">{{ product.category }}{% if product.subcategory %} · {{ product.subcategory }}{% endif %}</p>
+            {% if product.description %}
+              <p class="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed" title="{{ product.description }}">{{ product.description }}</p>
+            {% endif %}
           </div>
 
-          <!-- POV Score (pre-computed) -->
+          <!-- POV Score & Confidence Level (pre-computed) -->
           {% if rec %}
-          <div class="flex items-center gap-3 bg-indigo-50 rounded-xl px-3 py-2.5">
+          <div class="flex items-center gap-3 bg-gradient-to-r from-indigo-50/90 to-violet-50/90 border border-indigo-100 rounded-xl px-3 py-2.5 shadow-sm">
             <!-- Score Ring -->
             <div class="score-ring" data-score="{{ (rec.fit_score) | int }}">
               <svg width="52" height="52" viewBox="0 0 52 52">
@@ -176,8 +179,14 @@
               <div class="score-text">{{ (rec.fit_score) | int }}%</div>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-xs font-semibold text-indigo-800">POV Fit Score</p>
-              <p class="text-xs text-indigo-600 truncate">Size {{ rec.recommended_size }} · {{ (rec.confidence * 100) | int }}% confidence</p>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold text-indigo-900">POV Match</span>
+                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-200/60 text-indigo-800">Size {{ rec.recommended_size }}</span>
+              </div>
+              <p class="text-xs font-medium text-indigo-700 mt-0.5 flex items-center gap-1">
+                <span>🤖</span>
+                <span>{{ (rec.confidence * 100) | int }}% ML Confidence</span>
+              </p>
               <p class="text-xs text-gray-500 mt-0.5 truncate">{{ rec.reason }}</p>
             </div>
           </div>
@@ -349,9 +358,16 @@
         <p class="text-white/50 text-xs" id="vtoProductName">POV AI Try-On</p>
       </div>
     </div>
-    <button onclick="closeVTO()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
-      <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
+    <div class="flex items-center gap-2">
+      <label class="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition-colors" title="Update your virtual try-on photo">
+        <svg class="w-3.5 h-3.5 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span>Update Photo</span>
+        <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" onchange="uploadVTOPhoto(event)">
+      </label>
+      <button onclick="closeVTO()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- VTO content -->

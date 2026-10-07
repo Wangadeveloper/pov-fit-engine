@@ -8,7 +8,7 @@ from app.models.feedback import FitFeedback
 from app.models.product import Product, ProductVariant
 from app.models.brand import Brand
 from app.models.recommendation import Recommendation, RecommendationEvent
-from app.recommendation.engine import RuleBasedRecommendationEngine
+from app.recommendation import get_engine
 from typing import Dict, Any, List, Optional
 
 class RecommendationService:
@@ -45,7 +45,7 @@ class RecommendationService:
         products: List[Product]
     ) -> List[Dict[str, Any]]:
         profile, closet, feedback = RecommendationService.get_user_context(db, user_id)
-        engine = RuleBasedRecommendationEngine()
+        engine = get_engine()
 
         recs = []
         db_recs = []
@@ -73,6 +73,10 @@ class RecommendationService:
                 "fit_prediction": rec_data["fit_prediction"],
                 "reason": rec_data["reason"],
                 "explanation": rec_data["explanation"],
+                # Optional ML metadata (may be absent for rule-only engine)
+                "fit_probability": rec_data.get("fit_probability"),
+                "model_version": rec_data.get("model_version"),
+                "recommendation_source": rec_data.get("recommendation_source", "rule"),
             })
             db_recs.append(
                 Recommendation(
@@ -114,7 +118,7 @@ class RecommendationService:
         variants = product.variants
 
         # Run Recommendation Engine
-        engine = RuleBasedRecommendationEngine()
+        engine = get_engine()
         rec_data = engine.recommend(
             user_profile=profile,
             user_closet=closet,
@@ -144,7 +148,11 @@ class RecommendationService:
             "confidence": db_rec.confidence_score / 100.0,
             "fit_prediction": db_rec.fit_prediction,
             "reason": rec_data["reason"],
-            "explanation": db_rec.explanation
+            "explanation": db_rec.explanation,
+            # Optional ML metadata
+            "fit_probability": rec_data.get("fit_probability"),
+            "model_version": rec_data.get("model_version"),
+            "recommendation_source": rec_data.get("recommendation_source", "rule"),
         }
 
     @staticmethod

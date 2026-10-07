@@ -21,3 +21,13 @@ class Config:
     
     YOUCAM_API_KEY = os.environ.get("YOUCAM_API_KEY", "sk-YPdtdij2CGLKt4VuoOiyY3DzgjNgOjtex5NmcY4iMBnxCSa4f9vzGeG_Yck1vEOn")
     YOUCAM_API_BASE_URL = os.environ.get("YOUCAM_API_BASE_URL", "https://yce-api-01.makeupar.com/s2s")
+
+    # ── Recommendation engine ─────────────────────────────────────────────
+    # Options: "hybrid" (default) | "ml" | "rule"
+    RECOMMENDATION_ENGINE = os.environ.get("RECOMMENDATION_ENGINE", "hybrid")
+    # Path to trained LightGBM model file (relative to project root)
+    ML_MODEL_PATH = os.environ.get("ML_MODEL_PATH", "models/pov_fit_model.txt")
+    # Minimum ML confidence to use ML result; below this falls back to rules
+    ML_MIN_CONFIDENCE = float(os.environ.get("ML_MIN_CONFIDENCE", "0.55"))
+    # Percentage of requests routed to ML/hybrid (0–100). 100 = all users.
+    ML_ROLLOUT_PERCENTAGE = int(os.environ.get("ML_ROLLOUT_PERCENTAGE", "100"))

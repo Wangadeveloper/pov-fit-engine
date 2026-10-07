@@ -1,23 +1,300 @@
 {% extends "base.html" %}
+{% block title %}My Wardrobe{% endblock %}
 
-{% block title %}Closet{% endblock %}
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+
+  .wardrobe-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .wardrobe-card:hover {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+
+  .img-box {
+    aspect-ratio: 4/3;
+    background: #f8fafc;
+    position: relative;
+    overflow: hidden;
+  }
+  .img-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .fit-badge-perfect { background: #d1fae5; color: #065f46; }
+  .fit-badge-tight { background: #fee2e2; color: #991b1b; }
+  .fit-badge-loose { background: #fef3c7; color: #92400e; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 24px; width: 100%; max-width: 500px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.3); animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="py-10">
-    <h1 class="text-3xl font-bold mb-6">Your Closet</h1>
-    
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {% for item in items %}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <h3 class="font-semibold">{{ item.product.name if item.product else 'Unknown Item' }}</h3>
-            <p class="text-sm text-gray-500">Added on {{ item.created_at.strftime('%Y-%m-%d') }}</p>
-        </div>
-        {% else %}
-        <div class="col-span-full bg-gray-50 p-8 rounded-lg text-center border border-gray-200 border-dashed">
-            <p class="text-gray-500 mb-4">Your closet is empty.</p>
-            <a href="{{ url_for('shop.index') }}" class="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800">Start Shopping</a>
-        </div>
-        {% endfor %}
+<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-100">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">POV Wardrobe</span>
+        <span class="text-xs text-gray-400">• {{ items|length }} {{ 'item' if items|length == 1 else 'items' }}</span>
+      </div>
+      <h1 class="text-3xl font-black text-gray-900 mt-1">Your Wardrobe & Fit History</h1>
+      <p class="text-gray-500 text-sm mt-1">Items saved in your closet teach POV your exact size and fit preferences.</p>
     </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="openAddModal()"
+        class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add Item Manually
+      </button>
+      <a href="{{ url_for('shop.index') }}"
+        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+        <span>Shop Now</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- Items Grid -->
+  {% if items %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    {% for item in items %}
+    <div class="wardrobe-card" id="wardrobe-card-{{ item.id }}">
+      
+      <!-- Image / Category Graphic -->
+      <div class="img-box">
+        {% if item.image_url %}
+          <img src="{{ item.image_url }}" alt="{{ item.brand_name }} {{ item.category }}" loading="lazy">
+        {% else %}
+          <div class="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l9-4 9 4M3 7l9 4 9-4m-9 4v10"/>
+            </svg>
+            <span class="text-xs text-gray-400 font-medium">{{ item.category }}</span>
+          </div>
+        {% endif %}
+
+        <!-- Size Label Overlay -->
+        <span class="absolute top-3 left-3 bg-black/75 text-white font-bold text-xs px-2.5 py-1 rounded-lg backdrop-blur-sm">
+          Size {{ item.size_label }}
+        </span>
+      </div>
+
+      <!-- Content -->
+      <div class="p-4 flex flex-col gap-3 flex-grow">
+        <div>
+          <p class="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-0.5">{{ item.brand_name }}</p>
+          <h2 class="font-bold text-gray-900 text-sm leading-snug">
+            {{ item.notes if item.notes else (item.brand_name ~ ' ' ~ item.category) }}
+          </h2>
+          <p class="text-xs text-gray-500 mt-0.5">
+            {{ item.category }}{% if item.subcategory %} · {{ item.subcategory }}{% endif %}
+            {% if item.fit_label %} · {{ item.fit_label | title }}{% endif %}
+          </p>
+        </div>
+
+        <!-- Fit Rating Badge -->
+        <div class="flex items-center gap-2">
+          {% set rating_lower = item.fit_rating | lower %}
+          {% set badge_cls = 'fit-badge-perfect' if 'perfect' in rating_lower or 'good' in rating_lower else ('fit-badge-tight' if 'tight' in rating_lower else 'fit-badge-loose') %}
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full capitalize {{ badge_cls }}">
+            {% if 'perfect' in rating_lower %}✓ Perfect Fit
+            {% elif 'tight' in rating_lower %}↔ {{ item.fit_rating.replace('_', ' ') | title }}
+            {% else %}↔ {{ item.fit_rating.replace('_', ' ') | title }}
+            {% endif %}
+          </span>
+        </div>
+
+        <!-- Regions if available -->
+        {% if item.tight_loose_regions and item.tight_loose_regions.items() %}
+        <div class="flex flex-wrap gap-1.5 pt-1">
+          {% for region, val in item.tight_loose_regions.items() %}
+          <span class="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">
+            {{ region }}: {{ val }}
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Footer / Delete -->
+        <div class="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
+          <span class="text-[11px] text-gray-400">Added {{ item.created_at.strftime('%b %d, %Y') }}</span>
+          <button onclick="deleteItem('{{ item.id }}')"
+            class="text-xs text-red-500 hover:text-red-700 font-semibold transition-colors flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Remove
+          </button>
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="bg-gradient-to-b from-gray-50 to-white rounded-3xl p-12 text-center border-2 border-dashed border-gray-200 max-w-xl mx-auto space-y-4">
+    <div class="w-20 h-20 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto text-4xl shadow-inner">
+      👗
+    </div>
+    <div>
+      <h2 class="text-xl font-bold text-gray-900">Your Wardrobe is Empty</h2>
+      <p class="text-gray-500 text-sm mt-1 max-w-md mx-auto">
+        Add items from the Shop using Virtual Try-On or add your favourite existing clothes manually to calibrate your POV AI fit score.
+      </p>
+    </div>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+      <a href="{{ url_for('shop.index') }}"
+        class="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:opacity-95 transition-opacity">
+        Explore Shop & Try-On
+      </a>
+      <button onclick="openAddModal()"
+        class="w-full sm:w-auto bg-white border border-gray-300 text-gray-800 px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors">
+        + Add Item Manually
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+
+<!-- ══════════════════════════════════════
+     ADD ITEM MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal-box p-6 space-y-5">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+      <div>
+        <h3 class="font-bold text-gray-900 text-lg">Add Item to Wardrobe</h3>
+        <p class="text-xs text-gray-400">Help POV understand how your clothes fit</p>
+      </div>
+      <button onclick="closeAddModal()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form action="{{ url_for('closet.add') }}" method="POST" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Brand Name *</label>
+        <input type="text" name="brand_name" required placeholder="e.g. Nike, Levi's, Zara"
+          class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Item Name / Description</label>
+        <input type="text" name="notes" placeholder="e.g. Essential Club Fleece Pullover Hoodie"
+          class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Category *</label>
+          <select name="category" required class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="Hoodies">Hoodies</option>
+            <option value="T-Shirts">T-Shirts</option>
+            <option value="Shirts">Shirts</option>
+            <option value="Sweaters">Sweaters</option>
+            <option value="Jackets">Jackets</option>
+            <option value="Jeans">Jeans</option>
+            <option value="Trousers">Trousers</option>
+            <option value="Shorts">Shorts</option>
+            <option value="Dresses">Dresses</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Size *</label>
+          <input type="text" name="size_label" required placeholder="e.g. M, L, 32"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">How does it fit you? *</label>
+        <select name="fit_rating" required class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="perfect">✓ Fits Perfectly</option>
+          <option value="a_little_tight">↔ A Little Tight</option>
+          <option value="too_tight">↔ Too Tight</option>
+          <option value="a_little_loose">↔ A Little Loose</option>
+          <option value="too_loose">↔ Too Loose</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Image URL (Optional)</label>
+        <input type="url" name="image_url" placeholder="https://..."
+          class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+
+      <div class="pt-2 flex gap-3">
+        <button type="button" onclick="closeAddModal()" class="flex-1 bg-gray-100 text-gray-700 rounded-xl py-3 font-semibold text-sm hover:bg-gray-200 transition-colors">
+          Cancel
+        </button>
+        <button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl py-3 font-bold text-sm hover:opacity-90 transition-opacity">
+          Add to Wardrobe
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openAddModal() {
+  document.getElementById('addModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeAddModal() {
+  document.getElementById('addModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function deleteItem(itemId) {
+  if (!confirm('Are you sure you want to remove this item from your wardrobe?')) return;
+
+  fetch(`/closet/delete/${itemId}`, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(r => r.json())
+  .then(json => {
+    if (json.success) {
+      const card = document.getElementById(`wardrobe-card-${itemId}`);
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        setTimeout(() => location.reload(), 300);
+      } else {
+        location.reload();
+      }
+    } else {
+      alert(json.error || 'Failed to remove item.');
+    }
+  })
+  .catch(() => alert('Network error. Please try again.'));
+}
+</script>
 {% endblock %}

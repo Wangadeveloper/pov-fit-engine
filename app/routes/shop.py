@@ -195,6 +195,7 @@ def api_add_to_wardrobe(product_id):
         fit_label=product.silhouette_type,
         fit_rating=fit_rating,
         tight_loose_regions={},
+        notes=product.name,
         image_url=product.image_url,
     )
     db.session.add(item)

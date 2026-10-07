@@ -147,14 +147,21 @@
   <div class="stat-card">
     <div class="flex items-center justify-between mb-1">
       <h2 class="font-bold text-gray-900">📸 Virtual Try-On Photo</h2>
-      <span id="vtoBadge" class="vto-badge {% if not profile.try_on_photo_url %}vto-badge-off{% endif %}">
-        {% if profile.try_on_photo_url %}
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-          Try-On Ready
-        {% else %}
-          No Photo Yet
-        {% endif %}
-      </span>
+      <div class="flex items-center gap-2">
+        <span id="vtoBadge" class="vto-badge {% if not profile.try_on_photo_url %}vto-badge-off{% endif %}">
+          {% if profile.try_on_photo_url %}
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            Try-On Ready
+          {% else %}
+            No Photo Yet
+          {% endif %}
+        </span>
+        <label class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition-colors flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <span>{% if profile.try_on_photo_url %}Update Picture{% else %}Upload Picture{% endif %}</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="sr-only" onchange="handleFileChange(event)">
+        </label>
+      </div>
     </div>
     <p class="text-sm text-gray-500 mb-4">Upload a full-body photo so POV can show clothes on you in the Virtual Try-On.</p>
 

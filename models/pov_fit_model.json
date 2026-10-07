@@ -1,0 +1,71 @@
+{
+  "model_version": "pov-fit-lgbm-v1",
+  "training_date": "2026-10-07T12:08:48.838061+00:00",
+  "algorithm": "LightGBM",
+  "features_version": "features-v1",
+  "features": [
+    "height_cm",
+    "weight_kg",
+    "bmi",
+    "preferred_fit_enc",
+    "closet_item_count",
+    "category_closet_count",
+    "category_mode_size_numeric",
+    "category_size_entropy",
+    "same_brand_item_count",
+    "same_brand_mode_size_numeric",
+    "perfect_fit_count",
+    "slightly_tight_count",
+    "slightly_loose_count",
+    "total_purchases",
+    "category_purchases",
+    "brand_purchases",
+    "successful_fit_count",
+    "return_count",
+    "too_tight_count",
+    "too_loose_count",
+    "brand_too_tight_count",
+    "brand_too_loose_count",
+    "brand_fit_success_rate",
+    "category_fit_success_rate",
+    "user_fit_success_rate",
+    "category_enc",
+    "silhouette_enc",
+    "brand_relative_fit",
+    "available_size_count",
+    "structure_level_enc",
+    "candidate_size_numeric",
+    "candidate_size_position",
+    "candidate_size_delta_from_user_mode",
+    "candidate_size_delta_from_brand_mode"
+  ],
+  "n_estimators": 127,
+  "calibration": {
+    "a": 1.0641765243557195,
+    "b": 0.036658953818897166
+  },
+  "val_metrics": {
+    "roc_auc": 0.7513,
+    "pr_auc": 0.3496,
+    "log_loss": 0.4255,
+    "brier_score": 0.5824,
+    "accuracy": 0.7943
+  },
+  "test_metrics": {
+    "roc_auc": 0.7632,
+    "pr_auc": 0.363,
+    "log_loss": 0.4232,
+    "brier_score": 0.5788,
+    "accuracy": 0.7913
+  },
+  "split": {
+    "train_rows": 14000,
+    "val_rows": 3000,
+    "test_rows": 3000
+  },
+  "class_balance": {
+    "train_positive_rate": 0.1997857142857143,
+    "val_positive_rate": 0.199,
+    "test_positive_rate": 0.202
+  }
+}

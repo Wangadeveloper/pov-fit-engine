@@ -97,9 +97,9 @@ class ProductService:
         prod_res = db.session.execute(stmt_products)
         all_prods = prod_res.scalars().all()
 
-        # Rule-based engine for in-memory fit scoring during search ranking
-        from app.recommendation.engine import RuleBasedRecommendationEngine
-        rec_engine = RuleBasedRecommendationEngine()
+        # Hybrid/ML engine for in-memory fit scoring during search ranking
+        from app.recommendation import get_engine
+        rec_engine = get_engine()
 
         ranked_results = []
         
