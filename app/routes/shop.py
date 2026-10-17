@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
-from flask_login import login_required, current_user
+from flask_login import current_user
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 from app.extensions import db
@@ -10,12 +10,24 @@ from app.services.recommendation_service import RecommendationService
 from app.services.youcam_service import youcam_service
 import uuid
 
+
+def _require_auth():
+    """Return a JSON 401 response if the user is not logged in, else None."""
+    if not current_user.is_authenticated:
+        return jsonify({
+            "success": False,
+            "requires_auth": True,
+            "error": "Sign in to use this feature.",
+            "login_url": url_for("auth.login"),
+        }), 401
+    return None
+
 shop_bp = Blueprint('shop', __name__, url_prefix='/shop')
 
 
 @shop_bp.route('/')
 def index():
-    """Main shop page – show all products with POV fit scoring for logged-in users."""
+    """Main shop page – show all products with POV fit scoring and Qloo Cultural Stylist for logged-in users."""
     stmt = (
         select(Product)
         .options(selectinload(Product.brand), selectinload(Product.variants))
@@ -23,19 +35,28 @@ def index():
     )
     products = db.session.execute(stmt).scalars().all()
 
-    # For logged-in users, pre-compute POV fit scores for all products
+    # Mode: 'qloo' (default, cultural stylist) vs 'standard' (conventional sizing)
+    mode_param = request.args.get('mode', 'qloo').lower()
+    rec_mode = 'standard' if mode_param == 'standard' else 'qloo_enhanced'
+
     pov_scores = {}
     if current_user.is_authenticated:
         try:
             recs = RecommendationService.get_recommendations_for_products_batch(
-                db, current_user.id, list(products)
+                db, current_user.id, list(products), recommendation_mode=rec_mode
             )
             for rec in recs:
                 pov_scores[rec["product_id"]] = rec
         except Exception:
             pass  # Degrade gracefully — still show the shop
 
-    return render_template('shop/index.html', products=products, pov_scores=pov_scores)
+    return render_template(
+        'shop/index.html',
+        products=products,
+        pov_scores=pov_scores,
+        current_mode=mode_param,
+        rec_mode=rec_mode,
+    )
 
 
 @shop_bp.route('/product/<uuid:product_id>')
@@ -50,16 +71,24 @@ def product_detail(product_id):
     if not product:
         abort(404)
 
+    mode_param = request.args.get('mode', 'qloo').lower()
+    rec_mode = 'standard' if mode_param == 'standard' else 'qloo_enhanced'
+
     pov_analysis = None
     if current_user.is_authenticated:
         try:
             pov_analysis = RecommendationService.get_recommendation_for_product(
-                db, current_user.id, product_id
+                db, current_user.id, product_id, recommendation_mode=rec_mode
             )
         except Exception:
             pass
 
-    return render_template('shop/product.html', product=product, pov_analysis=pov_analysis)
+    return render_template(
+        'shop/product.html',
+        product=product,
+        pov_analysis=pov_analysis,
+        current_mode=mode_param,
+    )
 
 
 # ──────────────────────────────────────────────
@@ -67,21 +96,50 @@ def product_detail(product_id):
 # ──────────────────────────────────────────────
 
 @shop_bp.route('/api/fit-analysis/<uuid:product_id>', methods=['POST'])
-@login_required
 def api_fit_analysis(product_id):
     """
     Returns POV fit analysis for a product as JSON.
     Called by the "Fit with POV" button on product cards.
+    Requires authentication; returns JSON 401 for guests.
     """
+    auth_err = _require_auth()
+    if auth_err:
+        return auth_err
     try:
+        data = request.get_json() or {}
+        mode = data.get('mode') or request.args.get('mode', 'qloo_enhanced')
         analysis = RecommendationService.get_recommendation_for_product(
-            db, current_user.id, product_id
+            db, current_user.id, product_id, recommendation_mode=mode
         )
         return jsonify({"success": True, "data": analysis})
     except ValueError as e:
         return jsonify({"success": False, "error": str(e)}), 404
     except Exception as e:
-        return jsonify({"success": False, "error": "POV engine error. Please try again."}), 500
+        return jsonify({"success": False, "error": f"POV engine error: {e}"}), 500
+
+
+@shop_bp.route('/api/compare-modes', methods=['GET'])
+def api_compare_modes():
+    """
+    A/B comparison endpoint: Evaluates Standard vs Qloo-Enhanced recommendations side-by-side.
+    Requires authentication; returns JSON 401 for guests.
+    """
+    auth_err = _require_auth()
+    if auth_err:
+        return auth_err
+    try:
+        stmt = (
+            select(Product)
+            .options(selectinload(Product.brand), selectinload(Product.variants))
+            .order_by(Product.created_at.desc())
+        )
+        products = db.session.execute(stmt).scalars().all()
+        comparison = RecommendationService.compare_recommendations(
+            db, current_user.id, list(products)
+        )
+        return jsonify({"success": True, "data": comparison})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ──────────────────────────────────────────────
@@ -89,12 +147,15 @@ def api_fit_analysis(product_id):
 # ──────────────────────────────────────────────
 
 @shop_bp.route('/api/virtual-tryon/<uuid:product_id>', methods=['POST'])
-@login_required
 def api_virtual_tryon(product_id):
     """
     Initiates a YouCam virtual try-on task.
+    Requires authentication; returns JSON 401 for guests.
     Requires user to have a try_on_photo_url in their fit profile.
     """
+    auth_err = _require_auth()
+    if auth_err:
+        return auth_err
     from app.services.fit_service import FitService
 
     data = request.get_json() or {}
@@ -148,9 +209,11 @@ def api_virtual_tryon(product_id):
 
 
 @shop_bp.route('/api/virtual-tryon/status/<task_id>', methods=['GET'])
-@login_required
 def api_tryon_status(task_id):
-    """Poll YouCam for try-on task status."""
+    """Poll YouCam for try-on task status. Requires authentication."""
+    auth_err = _require_auth()
+    if auth_err:
+        return auth_err
     result = youcam_service.get_task_result(task_id)
     return jsonify(result)
 
@@ -160,9 +223,11 @@ def api_tryon_status(task_id):
 # ──────────────────────────────────────────────
 
 @shop_bp.route('/api/add-to-wardrobe/<uuid:product_id>', methods=['POST'])
-@login_required
 def api_add_to_wardrobe(product_id):
-    """Add a product directly to the user's wardrobe (closet) after try-on."""
+    """Add a product to the user's wardrobe. Requires authentication."""
+    auth_err = _require_auth()
+    if auth_err:
+        return auth_err
     stmt = select(Product).where(Product.id == product_id).options(selectinload(Product.brand))
     product = db.session.execute(stmt).scalars().first()
     if not product:

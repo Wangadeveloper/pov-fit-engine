@@ -51,6 +51,46 @@ def create_app(config_class=Config):
 def _init_db_data():
     from app.models.brand import Brand
     from app.models.product import Product, ProductVariant
+    from sqlalchemy import text
+
+    # Ensure tables have new columns on existing SQLite databases
+    try:
+        with db.engine.connect() as conn:
+            # Check fit_profiles
+            res = conn.execute(text("PRAGMA table_info(fit_profiles)")).fetchall()
+            cols = [r[1] for r in res]
+            if cols:
+                if 'cultural_interests' not in cols:
+                    conn.execute(text("ALTER TABLE fit_profiles ADD COLUMN cultural_interests JSON DEFAULT '[]'"))
+                if 'aesthetic_preference' not in cols:
+                    conn.execute(text("ALTER TABLE fit_profiles ADD COLUMN aesthetic_preference VARCHAR(100) DEFAULT 'casual'"))
+                if 'occasions' not in cols:
+                    conn.execute(text("ALTER TABLE fit_profiles ADD COLUMN occasions JSON DEFAULT '[]'"))
+                if 'budget_tier' not in cols:
+                    conn.execute(text("ALTER TABLE fit_profiles ADD COLUMN budget_tier VARCHAR(50) DEFAULT 'accessible'"))
+                conn.commit()
+
+            # Check recommendations
+            rec_res = conn.execute(text("PRAGMA table_info(recommendations)")).fetchall()
+            rec_cols = [r[1] for r in rec_res]
+            if rec_cols:
+                if 'cultural_score' not in rec_cols:
+                    conn.execute(text("ALTER TABLE recommendations ADD COLUMN cultural_score FLOAT"))
+                if 'cultural_rationale' not in rec_cols:
+                    conn.execute(text("ALTER TABLE recommendations ADD COLUMN cultural_rationale VARCHAR(1000)"))
+                if 'recommendation_type' not in rec_cols:
+                    conn.execute(text("ALTER TABLE recommendations ADD COLUMN recommendation_type VARCHAR(50) DEFAULT 'qloo_enhanced'"))
+                conn.commit()
+
+            # Check recommendation_events
+            ev_res = conn.execute(text("PRAGMA table_info(recommendation_events)")).fetchall()
+            ev_cols = [r[1] for r in ev_res]
+            if ev_cols:
+                if 'recommendation_type' not in ev_cols:
+                    conn.execute(text("ALTER TABLE recommendation_events ADD COLUMN recommendation_type VARCHAR(50) DEFAULT 'qloo_enhanced'"))
+                conn.commit()
+    except Exception:
+        pass
 
     try:
         # Check if products already exist

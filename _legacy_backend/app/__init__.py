@@ -1,1 +1,0 @@
-# POV Backend Application

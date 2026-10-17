@@ -15,6 +15,12 @@ class FitProfile(db.Model):
     preferred_jacket_fit: Mapped[str] = mapped_column(String(50), default="regular")
     comfort_preferences: Mapped[list[str]] = mapped_column(JSON, default=list)
     
+    # ── Qloo Cultural Taste Profile ─────────────────────────────────────────
+    cultural_interests: Mapped[list[str]] = mapped_column(JSON, default=list)
+    aesthetic_preference: Mapped[str] = mapped_column(String(100), default="casual")
+    occasions: Mapped[list[str]] = mapped_column(JSON, default=list)
+    budget_tier: Mapped[str] = mapped_column(String(50), default="accessible")
+    
     height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     try_on_photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

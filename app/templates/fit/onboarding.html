@@ -46,7 +46,7 @@
     <div class="mt-6 progress-bar">
       <div class="progress-fill" id="progressFill" style="width: 0%"></div>
     </div>
-    <p class="text-xs text-gray-400 mt-2" id="progressLabel">Step 1 of 4</p>
+    <p class="text-xs text-gray-400 mt-2" id="progressLabel">Step 1 of 5</p>
   </div>
 
   <form method="POST" id="onboardingForm">
@@ -136,10 +136,83 @@
       </div>
     </div>
 
+    <!-- Step 5: Cultural POV & Aesthetic Taste (Qloo Cultural Intelligence) -->
+    <div class="step-card mb-6" id="step5">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-bold text-gray-900">✨ Your Cultural POV & Aesthetic Taste</h2>
+        <span class="text-xs font-semibold px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full border border-purple-200">
+          Powered by Qloo
+        </span>
+      </div>
+      <p class="text-sm text-gray-500 mb-5">
+        POV connects your music, design, and cultural passions to clothes that reflect who you actually are.
+      </p>
+
+      <!-- Primary Aesthetic -->
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Primary Aesthetic Identity</label>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        {% for aes, icon, label in [
+          ('streetwear', '🛹', 'Streetwear'),
+          ('minimalist', '🏛️', 'Minimalist'),
+          ('gorpcore', '🌲', 'Gorpcore / Utility'),
+          ('vintage', '📻', 'Vintage / Heritage'),
+          ('quiet luxury', '🍸', 'Quiet Luxury'),
+          ('casual', '☕', 'Everyday Casual')
+        ] %}
+        <label>
+          <input type="radio" name="aesthetic_preference" value="{{ aes }}" class="sr-only"
+            {% if (profile and profile.aesthetic_preference == aes) or (not profile and aes == 'minimalist') %}checked{% endif %}>
+          <div class="option-btn {% if (profile and profile.aesthetic_preference == aes) or (not profile and aes == 'minimalist') %}selected{% endif %}"
+            onclick="selectOpt(this, 'aesthetic')">
+            <span class="icon">{{ icon }}</span>
+            <span>{{ label }}</span>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+
+      <!-- Music & Cultural Passions -->
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Cultural & Music Affinities (Select all that resonate)</label>
+      <div class="flex flex-wrap gap-2 mb-6">
+        {% for interest in [
+          'Indie Rock', 'Hip Hop / Trap', 'Electronic / Techno', 'Jazz / Soul',
+          '90s Alternative', 'Modern Classical', 'Classic Cinema', 'Modern Architecture',
+          'Japanese Street Culture', 'Outdoor Hiking', 'Avant-Garde Art'
+        ] %}
+        <label>
+          <input type="checkbox" name="cultural_interests" value="{{ interest }}" class="sr-only"
+            {% if profile and interest in (profile.cultural_interests or []) %}checked{% endif %}>
+          <span class="comfort-chip {% if profile and interest in (profile.cultural_interests or []) %}selected{% endif %}"
+            onclick="toggleChip(this)">{{ interest }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <!-- Occasions -->
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Where do you dress for most?</label>
+      <div class="flex flex-wrap gap-2 mb-5">
+        {% for occ in ['Daily Casual', 'Creative Studio', 'Night Out / Dinner', 'Concerts & Festivals', 'Travel & Commute'] %}
+        <label>
+          <input type="checkbox" name="occasions" value="{{ occ }}" class="sr-only"
+            {% if profile and occ in (profile.occasions or []) %}checked{% endif %}>
+          <span class="comfort-chip {% if profile and occ in (profile.occasions or []) %}selected{% endif %}"
+            onclick="toggleChip(this)">{{ occ }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <!-- Optional custom cultural keywords -->
+      <div>
+        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Specific Artists, Directors, or Style Icons (optional)</label>
+        <input type="text" name="custom_cultural_interest" placeholder="e.g. Frank Ocean, Wong Kar-wai, Bauhaus, Tyler the Creator"
+          class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+      </div>
+    </div>
+
     <button type="submit"
-      class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-4 rounded-xl font-bold text-base hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+      class="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white py-4 rounded-xl font-bold text-base hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-indigo-100">
       <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-      Save My Fit Profile
+      Activate POV Cultural Stylist
     </button>
   </form>
 </div>
@@ -164,10 +237,11 @@
     const tops = document.querySelector('input[name=preferred_top_fit]:checked');
     const bottoms = document.querySelector('input[name=preferred_bottom_fit]:checked');
     const jackets = document.querySelector('input[name=preferred_jacket_fit]:checked');
-    let done = [tops, bottoms, jackets].filter(Boolean).length;
-    const pct = Math.round((done / 4) * 100);
+    const aesthetic = document.querySelector('input[name=aesthetic_preference]:checked');
+    let done = [tops, bottoms, jackets, aesthetic].filter(Boolean).length;
+    const pct = Math.round((done / 5) * 100);
     document.getElementById('progressFill').style.width = pct + '%';
-    document.getElementById('progressLabel').textContent = `Step ${Math.min(done + 1, 4)} of 4`;
+    document.getElementById('progressLabel').textContent = `Step ${Math.min(done + 1, 5)} of 5`;
   }
 
   updateProgress();

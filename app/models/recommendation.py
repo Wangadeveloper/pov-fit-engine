@@ -18,6 +18,11 @@ class Recommendation(db.Model):
     fit_prediction: Mapped[dict] = mapped_column(JSON, default=dict)
     explanation: Mapped[list[str]] = mapped_column(JSON, default=list)
     
+    # ── Qloo Cultural Intelligence Fields ───────────────────────────────────
+    cultural_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cultural_rationale: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    recommendation_type: Mapped[str] = mapped_column(String(50), default="qloo_enhanced")  # "qloo_enhanced" | "standard"
+    
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
     user: Mapped["User"] = relationship("User", back_populates="recommendations")
@@ -33,6 +38,7 @@ class RecommendationEvent(db.Model):
     recommendation_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("recommendations.id", ondelete="SET NULL"), nullable=True)
     
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)  # viewed | clicked | size_viewed | added_to_closet | purchased | feedback_submitted | returned
+    recommendation_type: Mapped[str] = mapped_column(String(50), default="qloo_enhanced")  # "qloo_enhanced" | "standard"
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     

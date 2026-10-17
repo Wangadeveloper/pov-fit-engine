@@ -120,16 +120,69 @@
 
   <!-- Hero -->
   <div class="shop-hero text-center px-4">
-    <p class="text-xs font-semibold tracking-widest text-indigo-400 uppercase mb-3">Powered by POV Intelligence</p>
-    <h1 class="text-4xl sm:text-5xl font-black text-white mb-4 leading-tight">
-      Clothes that <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">know you.</span>
+    <div class="inline-flex items-center gap-2 bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-3 shadow-inner">
+      <span>✨</span>
+      <span>AI-Powered Personal Cultural Stylist</span>
+      <span class="text-indigo-400">·</span>
+      <span>Qloo Cultural AI + YouCam Virtual Try-On</span>
+    </div>
+    <h1 class="text-4xl sm:text-5xl font-black text-white mb-2 leading-tight">
+      Clothes that <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-violet-400">express your POV.</span>
     </h1>
-    <p class="text-gray-400 text-lg max-w-xl mx-auto">
-      Every item is scored for <em>your</em> fit preferences. Click <strong class="text-white">Fit with POV</strong> to get your personal analysis.
+    <p class="text-xl sm:text-2xl font-bold text-indigo-200 mb-3 tracking-tight">
+      Don't just add it to your cart. Fit it with POV.
+    </p>
+    <p class="text-gray-400 text-sm max-w-xl mx-auto leading-relaxed">
+      Explore your cultural interests, aesthetic identity, and fit needs to discover clothing that reflects who you are — then see yourself in it with live AI Virtual Try-On.
     </p>
   </div>
 
   <div class="px-4 sm:px-6 lg:px-8 pb-16">
+
+    <!-- Recommendation Mode Switcher & A/B Evaluation Toolbar -->
+    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-8 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Recommendation Mode:</span>
+        <div class="inline-flex rounded-xl p-1 bg-gray-100 border border-gray-200">
+          <a href="{{ url_for('shop.index', mode='qloo') }}"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 {{ 'bg-white shadow text-purple-700' if current_mode != 'standard' else 'text-gray-600 hover:text-gray-900' }}">
+            <span>✨</span>
+            <span>POV Cultural Stylist (Qloo)</span>
+          </a>
+          <a href="{{ url_for('shop.index', mode='standard') }}"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 {{ 'bg-white shadow text-indigo-700' if current_mode == 'standard' else 'text-gray-600 hover:text-gray-900' }}">
+            <span>📏</span>
+            <span>Standard Sizing (Control)</span>
+          </a>
+        </div>
+        {% if current_mode != 'standard' %}
+        <span class="inline-flex items-center gap-1 text-[11px] font-medium text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-100">
+          <span>🎯</span>
+          <span>Cultural Intelligence Active</span>
+        </span>
+        {% else %}
+        <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
+          <span>📐</span>
+          <span>Body Sizing Only</span>
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        {% if current_user.is_authenticated %}
+        <button onclick="openComparisonModal()"
+          class="text-xs font-semibold px-3.5 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors flex items-center gap-1.5 shadow-sm">
+          <span>📊</span>
+          <span>Evaluate A/B Relevance</span>
+        </button>
+        <a href="{{ url_for('fit.onboarding') }}"
+          class="text-xs font-semibold px-3.5 py-2 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors flex items-center gap-1.5 shadow-sm">
+          <span>🎨</span>
+          <span>Update Cultural Tastes</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
 
     <!-- Product Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -190,6 +243,35 @@
               <p class="text-xs text-gray-500 mt-0.5 truncate">{{ rec.reason }}</p>
             </div>
           </div>
+
+          <!-- Why this fits your POV (Cultural Stylist Explanation) -->
+          {% if rec and rec.cultural_rationale and current_mode != 'standard' %}
+          <div class="bg-gradient-to-br from-purple-50/90 to-indigo-50/90 border border-purple-100/80 rounded-xl p-3 text-xs shadow-sm">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-bold text-purple-900 flex items-center gap-1.5">
+                <span>✨</span>
+                <span>Why this fits your POV</span>
+              </span>
+              {% if rec.cultural_score %}
+              <span class="text-[10px] font-bold text-purple-700 bg-purple-200/50 px-1.5 py-0.5 rounded">
+                {{ (rec.cultural_score * 100) | int }}% Taste Match
+              </span>
+              {% endif %}
+            </div>
+            <p class="text-gray-700 text-[11px] leading-relaxed line-clamp-3" title="{{ rec.cultural_rationale }}">
+              {{ rec.cultural_rationale }}
+            </p>
+            {% if rec.matched_tags %}
+            <div class="flex flex-wrap gap-1 mt-2 pt-1 border-t border-purple-100/60">
+              {% for tag in rec.matched_tags %}
+              <span class="text-[9px] font-medium bg-white text-purple-800 border border-purple-100 px-1.5 py-0.5 rounded-md">
+                {{ tag }}
+              </span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
           {% endif %}
 
           <!-- Price -->
@@ -200,25 +282,23 @@
 
           <!-- Action Buttons -->
           <div class="flex flex-col gap-2 mt-auto">
-            {% if current_user.is_authenticated %}
-              <button
-                class="btn-pov"
-                onclick="openFitPanel('{{ pid }}', '{{ product.name | e }}', '{{ product.image_url or '' }}', '{{ product.category | e }}')"
-                id="btn-pov-{{ pid }}">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                </svg>
-                Fit with POV
-              </button>
-              <button
-                class="btn-vto"
-                onclick="startVTO('{{ pid }}', '{{ product.name | e }}', '{{ product.image_url or '' }}', '{{ product.category | e }}')">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82V15.18a1 1 0 01-1.447.894L15 14M3 8.5A1.5 1.5 0 014.5 7h8A1.5 1.5 0 0114 8.5v7A1.5 1.5 0 0112.5 17h-8A1.5 1.5 0 013 15.5v-7z"/>
-                </svg>
-                Virtual Try-On
-              </button>
-            {% endif %}
+            <button
+              class="btn-pov"
+              onclick="openFitPanel('{{ pid }}', '{{ product.name | e }}', '{{ product.image_url or '' }}', '{{ product.category | e }}')"
+              id="btn-pov-{{ pid }}">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+              Fit with POV
+            </button>
+            <button
+              class="btn-vto"
+              onclick="startVTO('{{ pid }}', '{{ product.name | e }}', '{{ product.image_url or '' }}', '{{ product.category | e }}')">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82V15.18a1 1 0 01-1.447.894L15 14M3 8.5A1.5 1.5 0 014.5 7h8A1.5 1.5 0 0114 8.5v7A1.5 1.5 0 0112.5 17h-8A1.5 1.5 0 013 15.5v-7z"/>
+              </svg>
+              Virtual Try-On
+            </button>
             <button class="btn-cart">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2 5h14M9 20a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"/>
@@ -233,6 +313,96 @@
         <p class="text-lg">No products in the shop yet.</p>
       </div>
       {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     A/B EVALUATION MODAL (Standard vs Qloo)
+══════════════════════════════════════ -->
+<div class="pov-panel" id="comparisonModal" onclick="closeComparisonModalOutside(event)">
+  <div class="pov-box" style="max-width: 720px;" id="comparisonBox">
+    <div class="flex items-center justify-between p-6 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+          📊
+        </div>
+        <div>
+          <p class="font-bold text-gray-900 text-base">POV Cultural Intelligence Evaluation</p>
+          <p class="text-xs text-gray-400">Comparing Standard Sizing (Control) vs Qloo Cultural Stylist (Experimental)</p>
+        </div>
+      </div>
+      <button onclick="closeComparisonModal()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+        <svg class="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div id="comparisonLoading" class="p-12 flex flex-col items-center gap-4 text-center">
+      <div class="spinner spinner-dark"></div>
+      <p class="text-sm font-semibold text-gray-700">Evaluating recommendation divergence across catalog…</p>
+    </div>
+
+    <!-- Content -->
+    <div id="comparisonContent" class="hidden p-6 space-y-6">
+      <!-- Metric Highlights -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+          <p class="text-[11px] font-semibold text-gray-400 uppercase">Avg Standard Score</p>
+          <p class="text-xl font-black text-gray-800 mt-1" id="metricStandardScore">–%</p>
+          <p class="text-[10px] text-gray-400 mt-0.5">Physical size fit only</p>
+        </div>
+        <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 text-center">
+          <p class="text-[11px] font-semibold text-purple-600 uppercase">Avg Qloo Score</p>
+          <p class="text-xl font-black text-purple-700 mt-1" id="metricQlooScore">–%</p>
+          <p class="text-[10px] text-purple-500 mt-0.5">Blended taste + fit</p>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+          <p class="text-[11px] font-semibold text-emerald-600 uppercase">Personalization Lift</p>
+          <p class="text-xl font-black text-emerald-700 mt-1" id="metricLiftPct">–%</p>
+          <p class="text-[10px] text-emerald-500 mt-0.5">Relevance increase</p>
+        </div>
+        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-center">
+          <p class="text-[11px] font-semibold text-indigo-600 uppercase">Avg Taste Resonance</p>
+          <p class="text-xl font-black text-indigo-700 mt-1" id="metricResonance">–%</p>
+          <p class="text-[10px] text-indigo-500 mt-0.5">Cultural alignment</p>
+        </div>
+      </div>
+
+      <!-- Core Finding Card -->
+      <div class="bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 border border-purple-100 rounded-2xl p-4">
+        <div class="flex items-start gap-3">
+          <span class="text-xl">💡</span>
+          <div>
+            <p class="font-bold text-gray-900 text-xs">Why Cultural Intelligence Changes The Outcome:</p>
+            <p class="text-xs text-gray-600 mt-1 leading-relaxed">
+              Standard recommendation systems recommend clothes merely because a size fits your body. POV's Qloo integration maps your musical, cinematic, and aesthetic worldview into clothing choices you'd actually love wearing, eliminating endless scrolling and generic bestsellers.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Side-by-Side Product Comparison Table -->
+      <div>
+        <p class="text-xs font-bold text-gray-900 uppercase tracking-wide mb-3">Item-by-Item Score Comparison</p>
+        <div class="overflow-x-auto border border-gray-100 rounded-xl">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-gray-50 border-b border-gray-100 text-gray-500">
+              <tr>
+                <th class="p-3">Product</th>
+                <th class="p-3 text-center">Standard Rec</th>
+                <th class="p-3 text-center">Qloo Stylist Rec</th>
+                <th class="p-3 text-center">Delta</th>
+                <th class="p-3">Cultural Taste Anchor</th>
+              </tr>
+            </thead>
+            <tbody id="comparisonTableBody" class="divide-y divide-gray-100">
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -302,6 +472,19 @@
         </div>
       </div>
 
+      <!-- Qloo Cultural Stylist Insight -->
+      <div id="culturalStylistBlock" class="hidden bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-1.5">
+          <p class="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+            <span>✨</span>
+            <span>Why This Fits Your Cultural POV</span>
+          </p>
+          <span id="culturalTasteScoreBadge" class="text-[10px] font-bold text-purple-700 bg-purple-200/50 px-2 py-0.5 rounded-full"></span>
+        </div>
+        <p id="culturalStylistRationale" class="text-xs text-gray-700 leading-relaxed"></p>
+        <div id="culturalMatchedTags" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
       <!-- Reason -->
       <div class="bg-gray-50 rounded-xl px-4 py-3">
         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">POV Says</p>
@@ -335,10 +518,12 @@
 
     <!-- Error state -->
     <div id="povError" class="hidden p-8 text-center">
-      <p class="text-4xl mb-3">🤔</p>
-      <p class="font-semibold text-gray-800">Couldn't analyse fit</p>
+      <p class="text-4xl mb-3" id="povErrorIcon">🤔</p>
+      <p class="font-semibold text-gray-800" id="povErrorTitle">Couldn't analyse fit</p>
       <p id="povErrorMsg" class="text-sm text-gray-500 mt-1">Please add some items to your wardrobe so POV can learn your preferences.</p>
-      <a href="{{ url_for('fit.onboarding') }}" class="inline-block mt-4 text-sm text-indigo-600 font-semibold hover:underline">Set up your Fit Profile →</a>
+      <div id="povErrorActions" class="mt-4 flex flex-col items-center gap-2">
+        <a id="povErrorCta" href="{{ url_for('fit.onboarding') }}" class="inline-block text-sm text-indigo-600 font-semibold hover:underline">Set up your Fit Profile →</a>
+      </div>
     </div>
   </div>
 </div>
@@ -371,37 +556,42 @@
   </div>
 
   <!-- VTO content -->
-  <div class="flex flex-col items-center justify-center gap-6 w-full px-4 pt-20 pb-28">
-
-    <!-- Loading -->
-    <div id="vtoLoading" class="flex flex-col items-center gap-4 text-center">
-      <div class="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
-        <div class="spinner"></div>
-      </div>
-      <p class="text-white font-semibold">Preparing your try-on…</p>
-      <p class="text-white/50 text-sm">POV AI is placing the garment on you</p>
+  <!-- Loading (centered overlay within the panel) -->
+  <div id="vtoLoading" class="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center z-10">
+    <div class="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+      <div class="spinner"></div>
     </div>
+    <p class="text-white font-semibold">Preparing your try-on…</p>
+    <p class="text-white/50 text-sm">POV AI is placing the garment on you</p>
+  </div>
 
-    <!-- Result -->
-    <div id="vtoResult" class="hidden flex-col items-center gap-4 w-full max-w-md">
-      <!-- Composite try-on display -->
-      <div id="vtoComposite" class="relative w-full rounded-2xl overflow-hidden bg-gray-900" style="min-height: 360px; max-height: 65vh;">
-        <!-- User photo background -->
-        <img id="vtoUserPhoto" src="" alt="You" class="w-full h-full object-cover" style="max-height:65vh;">
-        <!-- Garment overlay (sandbox mode) -->
-        <div id="vtoGarmentOverlay" class="hidden absolute inset-0 flex items-start justify-center pt-16 pb-8 px-4">
-          <img id="vtoGarmentImg" src="" alt="Garment" class="max-h-full max-w-xs rounded-xl shadow-2xl" style="max-height:55%;object-fit:contain;filter:drop-shadow(0 8px 32px rgba(0,0,0,0.6));">
-        </div>
-        <!-- Full result (live API) -->
-        <img id="vtoResultImg" src="" alt="Virtual Try-On Result" class="hidden w-full h-full object-cover absolute inset-0" style="max-height:65vh;">
+  <!-- Result — fills entire panel between top bar (64px) and action bar (88px) -->
+  <div id="vtoResult" class="hidden absolute inset-0 top-[64px] bottom-[88px] flex flex-col">
+    <!-- Composite try-on display — grows to fill all available space -->
+    <div id="vtoComposite" class="relative flex-1 bg-black overflow-hidden">
+      <!-- User photo background -->
+      <img id="vtoUserPhoto" src="" alt="You"
+           class="absolute inset-0 w-full h-full"
+           style="object-fit:contain;object-position:center;">
+      <!-- Garment overlay (sandbox mode) -->
+      <div id="vtoGarmentOverlay" class="hidden absolute inset-0 flex items-center justify-center p-6">
+        <img id="vtoGarmentImg" src="" alt="Garment"
+             class="max-w-[45%] max-h-[55%] rounded-xl shadow-2xl"
+             style="object-fit:contain;filter:drop-shadow(0 8px 32px rgba(0,0,0,0.6));">
       </div>
-      <div id="vtoSandboxNote" class="hidden text-center text-xs text-yellow-200/80 bg-yellow-400/10 border border-yellow-400/20 px-4 py-2.5 rounded-xl w-full">
-        👁 Preview mode — your photo + garment composited. For full AI try-on, connect a YouCam API key.
-      </div>
+      <!-- Full result (live API) -->
+      <img id="vtoResultImg" src="" alt="Virtual Try-On Result"
+           class="hidden absolute inset-0 w-full h-full"
+           style="object-fit:contain;object-position:center;">
     </div>
+    <!-- Sandbox note sits below the image, above the action bar -->
+    <div id="vtoSandboxNote" class="hidden text-center text-xs text-yellow-200/80 bg-yellow-500/10 border-t border-yellow-400/20 px-4 py-2.5 flex-shrink-0">
+      👁 Preview mode — your photo + garment composited. For full AI try-on, connect a YouCam API key.
+    </div>
+  </div>
 
-    <!-- Upload photo prompt (inline in panel) -->
-    <div id="vtoUploadPrompt" class="hidden flex-col items-center gap-5 text-center max-w-sm w-full">
+  <!-- Upload photo prompt (inline in panel, centered) -->
+  <div id="vtoUploadPrompt" class="hidden absolute inset-0 top-[64px] bottom-[88px] flex flex-col items-center justify-center gap-5 text-center max-w-sm w-full mx-auto px-6">
       <div class="text-5xl">📸</div>
       <div>
         <p class="text-white font-bold text-xl mb-2">Upload your photo first</p>
@@ -430,11 +620,11 @@
         <p id="vtoUploadStatus" class="text-white/50 text-xs mt-2 text-center">Uploading…</p>
       </div>
     </div>
+  </div>
 
-    <!-- Error -->
-    <div id="vtoError" class="hidden text-center">
-      <p class="text-red-400 font-semibold" id="vtoErrorMsg">Try-on failed. Please try again.</p>
-    </div>
+  <!-- Error -->
+  <div id="vtoError" class="hidden absolute inset-0 top-[64px] flex items-center justify-center text-center">
+    <p class="text-red-400 font-semibold" id="vtoErrorMsg">Try-on failed. Please try again.</p>
   </div>
 
   <!-- Bottom action bar (when result is ready) -->
@@ -477,6 +667,7 @@ function openFitPanel(pid, name, img, category) {
   fetch(`/shop/api/fit-analysis/${pid}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
   })
   .then(r => r.json())
   .then(json => {
@@ -514,6 +705,22 @@ function renderPovResult(data) {
   document.getElementById('resultConfBar').style.width = conf + '%';
   document.getElementById('resultReason').textContent = data.reason;
 
+  // Cultural Stylist block
+  const cultBlock = document.getElementById('culturalStylistBlock');
+  if (data.cultural_rationale) {
+    cultBlock.classList.remove('hidden');
+    document.getElementById('culturalStylistRationale').textContent = data.cultural_rationale;
+    const cultScore = Math.round((data.cultural_score || 0) * 100);
+    document.getElementById('culturalTasteScoreBadge').textContent = cultScore + '% Taste Match';
+    const tagContainer = document.getElementById('culturalMatchedTags');
+    tagContainer.innerHTML = '';
+    (data.matched_tags || []).forEach(tag => {
+      tagContainer.innerHTML += `<span class="text-[10px] font-medium bg-white text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md shadow-sm">${tag}</span>`;
+    });
+  } else {
+    cultBlock.classList.add('hidden');
+  }
+
   // Fit predictions
   const predsDiv = document.getElementById('fitPredictions');
   predsDiv.innerHTML = '';
@@ -539,6 +746,88 @@ function closePovPanel() {
 }
 function closePovPanelOutside(e) {
   if (e.target === document.getElementById('povPanel')) closePovPanel();
+}
+
+// ══════════════════════════════════════
+// A/B COMPARISON MODAL
+// ══════════════════════════════════════
+function openComparisonModal() {
+  document.getElementById('comparisonLoading').classList.remove('hidden');
+  document.getElementById('comparisonContent').classList.add('hidden');
+  document.getElementById('comparisonModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  fetch('/shop/api/compare-modes')
+    .then(r => r.json())
+    .then(json => {
+      document.getElementById('comparisonLoading').classList.add('hidden');
+      if (json.success && json.data) {
+        renderComparisonMetrics(json.data);
+      } else {
+        alert(json.error || 'Failed to load comparison data.');
+        closeComparisonModal();
+      }
+    })
+    .catch(() => {
+      document.getElementById('comparisonLoading').classList.add('hidden');
+      alert('Network error while running comparison.');
+      closeComparisonModal();
+    });
+}
+
+function renderComparisonMetrics(data) {
+  const metrics = data.evaluation_metrics || {};
+  document.getElementById('metricStandardScore').textContent = (metrics.avg_standard_score || 0) + '%';
+  document.getElementById('metricQlooScore').textContent = (metrics.avg_qloo_score || 0) + '%';
+  const lift = metrics.personalization_lift_pct || 0;
+  document.getElementById('metricLiftPct').textContent = (lift >= 0 ? '+' : '') + lift + '%';
+  document.getElementById('metricResonance').textContent = Math.round((metrics.avg_cultural_resonance || 0) * 100) + '%';
+
+  const tbody = document.getElementById('comparisonTableBody');
+  tbody.innerHTML = '';
+
+  const stdMap = {};
+  (data.standard_recommendations || []).forEach(item => {
+    stdMap[item.product_id] = item;
+  });
+
+  (data.qloo_recommendations || []).forEach(qItem => {
+    const sItem = stdMap[qItem.product_id] || {};
+    const stdScore = Math.round(sItem.fit_score || 0);
+    const qlooScore = Math.round(qItem.fit_score || 0);
+    const delta = qlooScore - stdScore;
+    const deltaClass = delta > 0 ? 'text-emerald-600 font-bold' : delta < 0 ? 'text-rose-600' : 'text-gray-400';
+    const deltaText = (delta > 0 ? '+' : '') + delta + '%';
+    const tag = (qItem.matched_tags && qItem.matched_tags[0]) || (qItem.editorial_headline || 'Aesthetic Match');
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-gray-50/50 transition-colors">
+        <td class="p-3">
+          <div class="font-semibold text-gray-900">${qItem.product_name}</div>
+          <div class="text-[11px] text-gray-400">${qItem.brand_name} · Size ${qItem.recommended_size}</div>
+        </td>
+        <td class="p-3 text-center font-medium text-gray-600">${stdScore}%</td>
+        <td class="p-3 text-center font-bold text-purple-700 bg-purple-50/40">${qlooScore}%</td>
+        <td class="p-3 text-center ${deltaClass}">${deltaText}</td>
+        <td class="p-3 text-gray-600">
+          <span class="inline-block bg-purple-50 text-purple-800 border border-purple-100 rounded px-2 py-0.5 text-[10px]">
+            ${tag}
+          </span>
+        </td>
+      </tr>
+    `;
+  });
+
+  document.getElementById('comparisonContent').classList.remove('hidden');
+}
+
+function closeComparisonModal() {
+  document.getElementById('comparisonModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function closeComparisonModalOutside(e) {
+  if (e.target === document.getElementById('comparisonModal')) closeComparisonModal();
 }
 
 function startVTOFromPanel() {

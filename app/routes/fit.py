@@ -14,17 +14,26 @@ def onboarding():
     if request.method == 'POST':
         from app.schemas.fit import OnboardingDetails
         try:
+            cultural_interests = request.form.getlist('cultural_interests')
+            custom_interest = request.form.get('custom_cultural_interest', '').strip()
+            if custom_interest:
+                cultural_interests.extend([i.strip() for i in custom_interest.split(',') if i.strip()])
+
             data = OnboardingDetails(
                 preferred_top_fit=request.form.get('preferred_top_fit', 'regular'),
                 preferred_bottom_fit=request.form.get('preferred_bottom_fit', 'straight'),
                 preferred_jacket_fit=request.form.get('preferred_jacket_fit', 'regular'),
                 comfort_preferences=request.form.getlist('comfort_preferences'),
+                cultural_interests=cultural_interests,
+                aesthetic_preference=request.form.get('aesthetic_preference', 'casual'),
+                occasions=request.form.getlist('occasions'),
+                budget_tier=request.form.get('budget_tier', 'accessible'),
                 height_cm=float(request.form['height_cm']) if request.form.get('height_cm') else None,
                 weight_kg=float(request.form['weight_kg']) if request.form.get('weight_kg') else None,
             )
             FitService.save_onboarding(db, current_user.id, data)
-            flash('Your fit profile has been updated!', 'success')
-            return redirect(url_for('main.dashboard'))
+            flash('Your POV Cultural Fit Profile has been updated!', 'success')
+            return redirect(url_for('shop.index'))
         except Exception as e:
             flash(f'Error saving profile: {e}', 'danger')
 

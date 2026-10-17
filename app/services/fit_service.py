@@ -29,6 +29,10 @@ class FitService:
                 preferred_bottom_fit="straight",
                 preferred_jacket_fit="regular",
                 comfort_preferences=[],
+                cultural_interests=[],
+                aesthetic_preference="casual",
+                occasions=[],
+                budget_tier="accessible",
                 confidence=0.25,
                 profile_completeness=0.15,
                 calibration_level="low"
@@ -68,6 +72,10 @@ class FitService:
         profile.preferred_bottom_fit = data.preferred_bottom_fit
         profile.preferred_jacket_fit = data.preferred_jacket_fit
         profile.comfort_preferences = data.comfort_preferences
+        profile.cultural_interests = data.cultural_interests
+        profile.aesthetic_preference = data.aesthetic_preference
+        profile.occasions = data.occasions
+        profile.budget_tier = data.budget_tier
         profile.height_cm = data.height_cm
         profile.weight_kg = data.weight_kg
         

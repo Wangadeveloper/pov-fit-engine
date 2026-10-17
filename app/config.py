@@ -22,6 +22,11 @@ class Config:
     YOUCAM_API_KEY = os.environ.get("YOUCAM_API_KEY", "sk-YPdtdij2CGLKt4VuoOiyY3DzgjNgOjtex5NmcY4iMBnxCSa4f9vzGeG_Yck1vEOn")
     YOUCAM_API_BASE_URL = os.environ.get("YOUCAM_API_BASE_URL", "https://yce-api-01.makeupar.com/s2s")
 
+    # ── Qloo Cultural Intelligence API ────────────────────────────────────
+    QLOO_API_KEY = os.environ.get("QLOO_API_KEY", "")
+    QLOO_API_BASE_URL = os.environ.get("QLOO_API_BASE_URL", "https://api.qloo.com").rstrip("/")
+    QLOO_SANDBOX_MODE = os.environ.get("QLOO_SANDBOX_MODE", "true").lower() in ("true", "1", "yes")
+
     # ── Recommendation engine ─────────────────────────────────────────────
     # Options: "hybrid" (default) | "ml" | "rule"
     RECOMMENDATION_ENGINE = os.environ.get("RECOMMENDATION_ENGINE", "hybrid")
