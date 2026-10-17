@@ -12,7 +12,8 @@ main_bp = Blueprint('main', __name__)
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
-    return render_template('index.html')
+    # Non-authenticated visitors land directly on the shop (no login required)
+    return redirect(url_for('shop.index'))
 
 @main_bp.route('/dashboard')
 @login_required

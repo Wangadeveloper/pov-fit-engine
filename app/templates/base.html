@@ -25,6 +25,7 @@
                         <a href="{{ url_for('profile.index') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Profile</a>
                         <a href="{{ url_for('auth.logout') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Logout</a>
                     {% else %}
+                        <a href="{{ url_for('shop.index') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Shop</a>
                         <a href="{{ url_for('auth.login') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Login</a>
                         <a href="{{ url_for('auth.register') }}" class="bg-black text-white hover:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium">Sign Up</a>
                     {% endif %}

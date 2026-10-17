@@ -998,9 +998,44 @@ function showVTOResult(garmentUrl, userPhotoUrl, isSandbox, sandboxNote) {
 }
 
 function closeVTO() {
+  // Stop any in-progress polling
   if (vtoPollInterval) { clearInterval(vtoPollInterval); vtoPollInterval = null; }
+
+  // Hide the panel
   document.getElementById('vtoPanel').classList.remove('open');
   document.body.style.overflow = '';
+
+  // ── Reset all inner panel states so next open starts clean ──
+  // Clear image sources to prevent flash of old content
+  document.getElementById('vtoUserPhoto').src = '';
+  document.getElementById('vtoGarmentImg').src = '';
+  document.getElementById('vtoResultImg').src = '';
+
+  // Reset sub-panel visibility
+  document.getElementById('vtoLoading').classList.remove('hidden');
+  document.getElementById('vtoResult').classList.add('hidden');
+  document.getElementById('vtoUploadPrompt').classList.add('hidden');
+  document.getElementById('vtoUploadPrompt').style.display = '';
+  document.getElementById('vtoError').classList.add('hidden');
+  document.getElementById('vtoActionBar').classList.add('hidden');
+  document.getElementById('vtoGarmentOverlay').classList.add('hidden');
+  document.getElementById('vtoSandboxNote').classList.add('hidden');
+  document.getElementById('vtoResultImg').classList.add('hidden');
+
+  // Reset wardrobe button state
+  const wardrobeBtn = document.getElementById('vtoAddWardrobeBtn');
+  if (wardrobeBtn) {
+    wardrobeBtn.disabled = false;
+    wardrobeBtn.textContent = '👗 Add to Wardrobe';
+    wardrobeBtn.classList.remove('bg-green-500', 'text-white');
+    wardrobeBtn.classList.add('bg-white', 'text-black');
+  }
+
+  // Reset upload progress
+  const uploadProgress = document.getElementById('vtoUploadProgress');
+  if (uploadProgress) uploadProgress.classList.add('hidden');
+  const uploadFill = document.getElementById('vtoUploadFill');
+  if (uploadFill) uploadFill.style.width = '0%';
 }
 
 // ══════════════════════════════════════
