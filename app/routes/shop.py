@@ -188,9 +188,17 @@ def api_virtual_tryon(product_id):
 
     garment_category = youcam_service.map_category(product.category)
 
+    # ── Resolve garment image URL to absolute so YouCam S2S API can fetch it ──
+    # Relative URLs (e.g. /static/product_images/...) are only meaningful to the
+    # browser. YouCam's servers need a fully-qualified public URL.
+    garment_url = product.image_url
+    if garment_url and garment_url.startswith("/"):
+        # Strip trailing slash from host_url then join
+        garment_url = request.host_url.rstrip("/") + garment_url
+
     result = youcam_service.create_tryon_task(
         user_photo_url=user_photo_url,
-        garment_image_url=product.image_url,
+        garment_image_url=garment_url,
         garment_category=garment_category,
     )
 
@@ -203,7 +211,8 @@ def api_virtual_tryon(product_id):
         "sandbox": result.get("sandbox", False),
         "sandbox_note": result.get("sandbox_note"),
         "product_name": product.name,
-        "garment_image_url": product.image_url,
+        # Return absolute URL so sandbox composite in browser also renders correctly
+        "garment_image_url": garment_url,
         "user_photo_url": user_photo_url,  # included so frontend can composite it
     })
 

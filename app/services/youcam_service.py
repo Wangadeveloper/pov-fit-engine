@@ -40,19 +40,19 @@ class YouCamVTOService:
         if not self.api_key:
             return self._sandbox_fallback(user_photo_url, garment_image_url, "No YouCam API Key configured.")
 
-        # Ensure image URLs are valid public URLs for YouCam S2S API
+        # Caller is responsible for converting relative URLs → absolute before calling this service.
+        # Here we just handle local-dev user photos (uploaded to localhost) where YouCam can't fetch.
         src_url = user_photo_url
-        ref_url = garment_image_url
+        ref_url = garment_image_url  # Must already be absolute; shop.py resolves this.
 
-        # Fallback for localhost URLs when running locally so YouCam can fetch images
-        if not src_url.startswith("https://"):
-            if src_url.startswith("http://localhost") or src_url.startswith("http://127.0.0.1") or src_url.startswith("/"):
-                # Use standard high-quality model photo for local dev testing with live YouCam API
-                src_url = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600"
-
-        if not ref_url.startswith("https://"):
-            if ref_url.startswith("http://localhost") or ref_url.startswith("http://127.0.0.1") or ref_url.startswith("/"):
-                ref_url = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600"
+        # For local dev: user photo is on localhost — fall back to a placeholder so live API works.
+        # Garment URL is NOT replaced here; if it's not absolute the caller must fix it.
+        if not src_url.startswith("https://") and (
+            src_url.startswith("http://localhost")
+            or src_url.startswith("http://127.0.0.1")
+            or src_url.startswith("/")
+        ):
+            src_url = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600"
 
         endpoint = f"{self.base_url}/v2.0/task/cloth-v3"
         payload = {
