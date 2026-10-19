@@ -27,36 +27,123 @@ shop_bp = Blueprint('shop', __name__, url_prefix='/shop')
 
 @shop_bp.route('/')
 def index():
-    """Main shop page – show all products with POV fit scoring and Qloo Cultural Stylist for logged-in users."""
+    """Main shop page – render shell instantly; products + scores load client-side."""
+    mode_param = request.args.get('mode', 'qloo').lower()
+    rec_mode = 'standard' if mode_param == 'standard' else 'qloo_enhanced'
+    return render_template(
+        'shop/index.html',
+        current_mode=mode_param,
+        rec_mode=rec_mode,
+    )
+
+
+# ──────────────────────────────────────────────
+# API: Paginated product listing  (no POV scores)
+# ──────────────────────────────────────────────
+
+@shop_bp.route('/api/products')
+def api_products():
+    """
+    Returns a paginated list of products as JSON — no POV scoring.
+    Query params:
+      page     (int, default 1)
+      per_page (int, default 20, max 40)
+      mode     (str, 'qloo' | 'standard') — echoed back for client use
+    """
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+        per_page = min(40, max(1, int(request.args.get('per_page', 20))))
+    except (ValueError, TypeError):
+        page, per_page = 1, 20
+
+    mode_param = request.args.get('mode', 'qloo').lower()
+
     stmt = (
         select(Product)
         .options(selectinload(Product.brand), selectinload(Product.variants))
         .order_by(Product.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page + 1)          # fetch one extra to know if there's a next page
     )
-    products = db.session.execute(stmt).scalars().all()
+    rows = db.session.execute(stmt).scalars().all()
+    has_next = len(rows) > per_page
+    products = rows[:per_page]
 
-    # Mode: 'qloo' (default, cultural stylist) vs 'standard' (conventional sizing)
+    items = []
+    for p in products:
+        items.append({
+            "id": str(p.id),
+            "name": p.name,
+            "brand": p.brand.name if p.brand else "Unknown Brand",
+            "category": p.category,
+            "subcategory": p.subcategory,
+            "description": p.description,
+            "price": float(p.price),
+            "currency": p.currency,
+            "image_url": p.image_url or "",
+            "silhouette_type": p.silhouette_type,
+        })
+
+    return jsonify({
+        "success": True,
+        "page": page,
+        "per_page": per_page,
+        "has_next": has_next,
+        "mode": mode_param,
+        "products": items,
+    })
+
+
+# ──────────────────────────────────────────────
+# API: Lazy POV scores for a set of products
+# ──────────────────────────────────────────────
+
+@shop_bp.route('/api/pov-scores')
+def api_pov_scores():
+    """
+    Returns POV fit scores for a comma-separated list of product IDs.
+    Query params:
+      ids   (str) comma-separated UUIDs
+      mode  (str) 'qloo' | 'standard'
+    Returns empty dict for unauthenticated users (graceful degradation).
+    """
+    if not current_user.is_authenticated:
+        return jsonify({"success": True, "scores": {}})
+
+    raw_ids = request.args.get('ids', '')
     mode_param = request.args.get('mode', 'qloo').lower()
     rec_mode = 'standard' if mode_param == 'standard' else 'qloo_enhanced'
 
-    pov_scores = {}
-    if current_user.is_authenticated:
-        try:
-            recs = RecommendationService.get_recommendations_for_products_batch(
-                db, current_user.id, list(products), recommendation_mode=rec_mode
-            )
-            for rec in recs:
-                pov_scores[rec["product_id"]] = rec
-        except Exception:
-            pass  # Degrade gracefully — still show the shop
+    product_ids = []
+    for raw in raw_ids.split(','):
+        raw = raw.strip()
+        if raw:
+            try:
+                product_ids.append(uuid.UUID(raw))
+            except ValueError:
+                pass
 
-    return render_template(
-        'shop/index.html',
-        products=products,
-        pov_scores=pov_scores,
-        current_mode=mode_param,
-        rec_mode=rec_mode,
+    if not product_ids:
+        return jsonify({"success": True, "scores": {}})
+
+    stmt = (
+        select(Product)
+        .where(Product.id.in_(product_ids))
+        .options(selectinload(Product.brand), selectinload(Product.variants))
     )
+    products = db.session.execute(stmt).scalars().all()
+
+    scores = {}
+    try:
+        recs = RecommendationService.get_recommendations_for_products_batch(
+            db, current_user.id, list(products), recommendation_mode=rec_mode
+        )
+        for rec in recs:
+            scores[rec["product_id"]] = rec
+    except Exception:
+        pass  # Degrade gracefully
+
+    return jsonify({"success": True, "scores": scores})
 
 
 @shop_bp.route('/product/<uuid:product_id>')

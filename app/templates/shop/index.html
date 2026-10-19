@@ -6,7 +6,7 @@
 <style>
   body { font-family: 'Inter', sans-serif; }
 
-  /* === POV Score Ring === */
+  /* === Score Ring === */
   .score-ring { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
   .score-ring svg { transform: rotate(-90deg); }
   .score-ring .ring-bg { stroke: #e5e7eb; }
@@ -26,8 +26,14 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
     transition: box-shadow 0.2s ease, transform 0.2s ease;
     display: flex; flex-direction: column;
+    opacity: 0; transform: translateY(18px);
+    animation: fadeSlideUp 0.4s ease forwards;
   }
   .product-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateY(-2px); }
+
+  @keyframes fadeSlideUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   .card-img-wrap { position: relative; aspect-ratio: 3/4; overflow: hidden; background: #f3f4f6; }
   .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
@@ -40,6 +46,34 @@
     padding: 3px 8px; border-radius: 999px; letter-spacing: 0.5px;
     text-transform: uppercase;
   }
+
+  /* ── Skeleton / shimmer ── */
+  .skeleton-card {
+    background: #fff; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; flex-direction: column;
+  }
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmerAnim 1.4s ease infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmerAnim {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .skel-img  { aspect-ratio: 3/4; border-radius: 0; }
+  .skel-line { height: 12px; margin: 6px 0; }
+  .skel-line.short { width: 55%; }
+  .skel-line.tall  { height: 16px; }
+  .skel-btn  { height: 36px; border-radius: 10px; margin-top: 4px; }
+
+  /* ── Score section fade-in ── */
+  .pov-score-section {
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .pov-score-section.loaded { opacity: 1; transform: translateY(0); }
 
   /* === POV Analysis Panel === */
   .pov-panel {
@@ -112,6 +146,19 @@
     background: linear-gradient(135deg, #0f0f0f 0%, #1e1b4b 50%, #0f0f0f 100%);
     padding: 60px 0 50px; margin-bottom: 40px;
   }
+
+  /* End-of-catalog message */
+  #endOfCatalog {
+    display: none; text-align: center; padding: 40px 0 20px;
+    color: #9ca3af; font-size: 14px; font-weight: 500;
+  }
+
+  /* Loading more indicator */
+  #loadingMore {
+    display: none; justify-content: center; align-items: center;
+    gap: 10px; padding: 32px 0; color: #6b7280; font-size: 13px;
+  }
+  #loadingMore .spinner-dark { width: 18px; height: 18px; }
 </style>
 {% endblock %}
 
@@ -185,135 +232,38 @@
     </div>
 
     <!-- Product Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {% for product in products %}
-      {% set pid = product.id | string %}
-      {% set rec = pov_scores.get(pid) %}
-      <div class="product-card">
-
-        <!-- Image -->
-        <div class="card-img-wrap">
-          {% if rec %}
-            <span class="card-badge">✦ POV Ready</span>
-          {% endif %}
-          {% if product.image_url %}
-            <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
-          {% else %}
-            <div class="flex items-center justify-center h-full text-gray-300">
-              <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          {% endif %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="productGrid">
+      <!-- Skeleton cards shown while first page loads -->
+      {% for _ in range(8) %}
+      <div class="skeleton-card">
+        <div class="shimmer skel-img"></div>
+        <div class="p-4 flex flex-col gap-2">
+          <div class="shimmer skel-line short"></div>
+          <div class="shimmer skel-line tall"></div>
+          <div class="shimmer skel-line"></div>
+          <div class="shimmer skel-btn mt-2"></div>
+          <div class="shimmer skel-btn"></div>
+          <div class="shimmer skel-btn"></div>
         </div>
-
-        <!-- Info -->
-        <div class="p-4 flex flex-col gap-3 flex-grow">
-          <div>
-            <p class="text-xs text-gray-400 font-medium mb-0.5">{{ product.brand.name if product.brand else 'Unknown Brand' }}</p>
-            <h2 class="font-semibold text-gray-900 text-sm leading-tight">{{ product.name }}</h2>
-            <p class="text-gray-500 text-xs mt-1">{{ product.category }}{% if product.subcategory %} · {{ product.subcategory }}{% endif %}</p>
-            {% if product.description %}
-              <p class="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed" title="{{ product.description }}">{{ product.description }}</p>
-            {% endif %}
-          </div>
-
-          <!-- POV Score & Confidence Level (pre-computed) -->
-          {% if rec %}
-          <div class="flex items-center gap-3 bg-gradient-to-r from-indigo-50/90 to-violet-50/90 border border-indigo-100 rounded-xl px-3 py-2.5 shadow-sm">
-            <!-- Score Ring -->
-            <div class="score-ring" data-score="{{ (rec.fit_score) | int }}">
-              <svg width="52" height="52" viewBox="0 0 52 52">
-                <circle class="ring-bg" cx="26" cy="26" r="22" fill="none" stroke-width="5"/>
-                <circle class="ring-fill" cx="26" cy="26" r="22" fill="none" stroke-width="5"
-                  stroke="{{ '#10b981' if rec.fit_score >= 80 else '#f59e0b' if rec.fit_score >= 60 else '#ef4444' }}"
-                  style="stroke-dashoffset: {{ 138 - (138 * rec.fit_score / 100) | int }}"/>
-              </svg>
-              <div class="score-text">{{ (rec.fit_score) | int }}%</div>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <span class="text-xs font-bold text-indigo-900">POV Match</span>
-                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-200/60 text-indigo-800">Size {{ rec.recommended_size }}</span>
-              </div>
-              <p class="text-xs font-medium text-indigo-700 mt-0.5 flex items-center gap-1">
-                <span>🤖</span>
-                <span>{{ (rec.confidence * 100) | int }}% ML Confidence</span>
-              </p>
-              <p class="text-xs text-gray-500 mt-0.5 truncate">{{ rec.reason }}</p>
-            </div>
-          </div>
-
-          <!-- Why this fits your POV (Cultural Stylist Explanation) -->
-          {% if rec and rec.cultural_rationale and current_mode != 'standard' %}
-          <div class="bg-gradient-to-br from-purple-50/90 to-indigo-50/90 border border-purple-100/80 rounded-xl p-3 text-xs shadow-sm">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="font-bold text-purple-900 flex items-center gap-1.5">
-                <span>✨</span>
-                <span>Why this fits your POV</span>
-              </span>
-              {% if rec.cultural_score %}
-              <span class="text-[10px] font-bold text-purple-700 bg-purple-200/50 px-1.5 py-0.5 rounded">
-                {{ (rec.cultural_score * 100) | int }}% Taste Match
-              </span>
-              {% endif %}
-            </div>
-            <p class="text-gray-700 text-[11px] leading-relaxed line-clamp-3" title="{{ rec.cultural_rationale }}">
-              {{ rec.cultural_rationale }}
-            </p>
-            {% if rec.matched_tags %}
-            <div class="flex flex-wrap gap-1 mt-2 pt-1 border-t border-purple-100/60">
-              {% for tag in rec.matched_tags %}
-              <span class="text-[9px] font-medium bg-white text-purple-800 border border-purple-100 px-1.5 py-0.5 rounded-md">
-                {{ tag }}
-              </span>
-              {% endfor %}
-            </div>
-            {% endif %}
-          </div>
-          {% endif %}
-          {% endif %}
-
-          <!-- Price -->
-          <div class="flex items-center justify-between">
-            <span class="text-lg font-bold text-gray-900">${{ "%.2f" | format(product.price) }}</span>
-            <span class="text-xs text-gray-400 uppercase tracking-wide">{{ product.currency }}</span>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex flex-col gap-2 mt-auto">
-            <button
-              class="btn-pov"
-              onclick="openFitPanel('{{ pid }}', '{{ product.name | e }}', '{{ product.image_url or '' }}', '{{ product.category | e }}')"
-              id="btn-pov-{{ pid }}">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-              </svg>
-              Fit with POV
-            </button>
-            <button
-              class="btn-vto"
-              onclick="startVTO('{{ pid }}', '{{ product.name | e }}', '{{ product.image_url or '' }}', '{{ product.category | e }}')">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82V15.18a1 1 0 01-1.447.894L15 14M3 8.5A1.5 1.5 0 014.5 7h8A1.5 1.5 0 0114 8.5v7A1.5 1.5 0 0112.5 17h-8A1.5 1.5 0 013 15.5v-7z"/>
-              </svg>
-              Virtual Try-On
-            </button>
-            <button class="btn-cart">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2 5h14M9 20a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"/>
-              </svg>
-              Add to Cart
-            </button>
-          </div>
-        </div>
-      </div>
-      {% else %}
-      <div class="col-span-full text-center py-20 text-gray-400">
-        <p class="text-lg">No products in the shop yet.</p>
       </div>
       {% endfor %}
     </div>
+
+    <!-- Loading more spinner -->
+    <div id="loadingMore">
+      <div class="spinner spinner-dark"></div>
+      <span>Loading more…</span>
+    </div>
+
+    <!-- Intersection observer sentinel -->
+    <div id="scrollSentinel" style="height:1px;"></div>
+
+    <!-- End of catalog -->
+    <div id="endOfCatalog">
+      <span>✦ You've seen everything — </span>
+      <a href="{{ url_for('fit.onboarding') }}" class="text-indigo-500 font-semibold hover:underline">Update your tastes for new picks →</a>
+    </div>
+
   </div>
 </div>
 
@@ -439,7 +389,7 @@
       </div>
       <div class="text-center">
         <p class="font-semibold text-gray-800">POV is analysing your fit…</p>
-        <p class="text-sm text-gray-400 mt-1">Checking your size history, brand data & preferences</p>
+        <p class="text-sm text-gray-400 mt-1">Checking your size history, brand data &amp; preferences</p>
       </div>
     </div>
 
@@ -640,6 +590,12 @@
 
 <script>
 // ══════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════
+const SHOP_MODE = '{{ current_mode }}';
+const PER_PAGE  = 20;
+
+// ══════════════════════════════════════
 // STATE
 // ══════════════════════════════════════
 let currentProductId = null;
@@ -647,6 +603,254 @@ let currentProductName = '';
 let currentProductImg = '';
 let currentProductCategory = '';
 let currentPovResult = null;
+
+// Pagination state
+let currentPage   = 0;
+let isLoading     = false;
+let hasMore       = true;
+
+// ══════════════════════════════════════
+// PROGRESSIVE PRODUCT LOADING
+// ══════════════════════════════════════
+
+function buildCardHTML(p) {
+  const esc = s => String(s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  const pid = p.id;
+  const price = Number(p.price).toFixed(2);
+
+  return `
+  <div class="product-card" id="card-${pid}" data-pid="${pid}">
+    <!-- Image -->
+    <div class="card-img-wrap">
+      <span class="card-badge hidden pov-badge-${pid}">✦ POV Ready</span>
+      ${p.image_url
+        ? `<img src="${p.image_url}" alt="${esc(p.name)}" loading="lazy">`
+        : `<div class="flex items-center justify-center h-full text-gray-300">
+             <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+             </svg>
+           </div>`
+      }
+    </div>
+
+    <!-- Info -->
+    <div class="p-4 flex flex-col gap-3 flex-grow">
+      <div>
+        <p class="text-xs text-gray-400 font-medium mb-0.5">${p.brand || 'Unknown Brand'}</p>
+        <h2 class="font-semibold text-gray-900 text-sm leading-tight">${p.name}</h2>
+        <p class="text-gray-500 text-xs mt-1">${p.category}${p.subcategory ? ' · ' + p.subcategory : ''}</p>
+        ${p.description ? `<p class="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed" title="${esc(p.description)}">${p.description}</p>` : ''}
+      </div>
+
+      <!-- POV Score section — populated lazily -->
+      <div class="pov-score-section" id="pov-section-${pid}">
+        <!-- Slim score placeholder while AI loads -->
+        <div class="pov-score-placeholder-${pid} flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+          <div class="w-8 h-8 rounded-full shimmer flex-shrink-0"></div>
+          <div class="flex-1">
+            <div class="shimmer skel-line short" style="height:10px;width:70%;margin:0"></div>
+            <div class="shimmer skel-line" style="height:8px;width:50%;margin-top:4px"></div>
+          </div>
+        </div>
+        <!-- Score content injected here -->
+      </div>
+
+      <!-- Price -->
+      <div class="flex items-center justify-between">
+        <span class="text-lg font-bold text-gray-900">$${price}</span>
+        <span class="text-xs text-gray-400 uppercase tracking-wide">${p.currency || 'USD'}</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col gap-2 mt-auto">
+        <button class="btn-pov"
+          onclick="openFitPanel('${pid}', '${esc(p.name)}', '${esc(p.image_url)}', '${esc(p.category)}')"
+          id="btn-pov-${pid}">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          Fit with POV
+        </button>
+        <button class="btn-vto"
+          onclick="startVTO('${pid}', '${esc(p.name)}', '${esc(p.image_url)}', '${esc(p.category)}')">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82V15.18a1 1 0 01-1.447.894L15 14M3 8.5A1.5 1.5 0 014.5 7h8A1.5 1.5 0 0114 8.5v7A1.5 1.5 0 0112.5 17h-8A1.5 1.5 0 013 15.5v-7z"/>
+          </svg>
+          Virtual Try-On
+        </button>
+        <button class="btn-cart">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2 5h14M9 20a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"/>
+          </svg>
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadProducts(page) {
+  if (isLoading || !hasMore) return;
+  isLoading = true;
+
+  const grid = document.getElementById('productGrid');
+  const loadingMore = document.getElementById('loadingMore');
+
+  if (page === 1) {
+    // Remove initial skeleton cards on first load
+    grid.innerHTML = '';
+  } else {
+    loadingMore.style.display = 'flex';
+  }
+
+  try {
+    const res = await fetch(`/shop/api/products?page=${page}&per_page=${PER_PAGE}&mode=${SHOP_MODE}`);
+    const json = await res.json();
+
+    loadingMore.style.display = 'none';
+
+    if (!json.success || !json.products.length) {
+      if (page === 1) {
+        grid.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400">
+          <p class="text-lg">No products in the shop yet.</p>
+        </div>`;
+      }
+      hasMore = false;
+      document.getElementById('endOfCatalog').style.display = 'block';
+      return;
+    }
+
+    hasMore = json.has_next;
+    currentPage = page;
+
+    // Stagger card insertion for a cascade effect
+    const fragment = document.createDocumentFragment();
+    const newIds = [];
+
+    json.products.forEach((p, i) => {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = buildCardHTML(p).trim();
+      const card = wrapper.firstChild;
+      // Stagger animation delay
+      card.style.animationDelay = `${i * 40}ms`;
+      fragment.appendChild(card);
+      newIds.push(p.id);
+    });
+
+    grid.appendChild(fragment);
+
+    if (!hasMore) {
+      document.getElementById('endOfCatalog').style.display = 'block';
+    }
+
+    // Lazily fetch POV scores for this batch of products
+    loadPovScores(newIds);
+
+  } catch (err) {
+    loadingMore.style.display = 'none';
+    console.error('Failed to load products', err);
+  } finally {
+    isLoading = false;
+  }
+}
+
+// ── Lazy POV score injection ──────────────────────────────────────────────────
+
+async function loadPovScores(ids) {
+  if (!ids.length) return;
+
+  try {
+    const res = await fetch(`/shop/api/pov-scores?ids=${ids.join(',')}&mode=${SHOP_MODE}`);
+    const json = await res.json();
+    if (!json.success) return;
+
+    for (const [pid, rec] of Object.entries(json.scores)) {
+      injectPovScore(pid, rec);
+    }
+  } catch (e) {
+    // Silently fail — shop still works without scores
+  }
+}
+
+function injectPovScore(pid, rec) {
+  const section = document.getElementById(`pov-section-${pid}`);
+  if (!section) return;
+
+  const score = Math.round(rec.fit_score || 0);
+  const conf  = Math.round((rec.confidence || 0) * 100);
+  const ringOffset = Math.round(138 - (138 * score / 100));
+  const ringColor  = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444';
+  const showMode   = SHOP_MODE !== 'standard';
+
+  // Show "POV Ready" badge
+  const badge = document.querySelector(`.pov-badge-${pid}`);
+  if (badge) badge.classList.remove('hidden');
+
+  const culturalHTML = (rec.cultural_rationale && showMode) ? `
+    <div class="bg-gradient-to-br from-purple-50/90 to-indigo-50/90 border border-purple-100/80 rounded-xl p-3 text-xs shadow-sm mt-2">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="font-bold text-purple-900 flex items-center gap-1.5">
+          <span>✨</span><span>Why this fits your POV</span>
+        </span>
+        ${rec.cultural_score
+          ? `<span class="text-[10px] font-bold text-purple-700 bg-purple-200/50 px-1.5 py-0.5 rounded">${Math.round(rec.cultural_score * 100)}% Taste Match</span>`
+          : ''}
+      </div>
+      <p class="text-gray-700 text-[11px] leading-relaxed line-clamp-3" title="${(rec.cultural_rationale||'').replace(/"/g,'&quot;')}">${rec.cultural_rationale}</p>
+      ${(rec.matched_tags || []).length ? `
+        <div class="flex flex-wrap gap-1 mt-2 pt-1 border-t border-purple-100/60">
+          ${(rec.matched_tags).map(t => `<span class="text-[9px] font-medium bg-white text-purple-800 border border-purple-100 px-1.5 py-0.5 rounded-md">${t}</span>`).join('')}
+        </div>` : ''}
+    </div>` : '';
+
+  section.innerHTML = `
+    <div class="flex items-center gap-3 bg-gradient-to-r from-indigo-50/90 to-violet-50/90 border border-indigo-100 rounded-xl px-3 py-2.5 shadow-sm">
+      <div class="score-ring" data-score="${score}">
+        <svg width="52" height="52" viewBox="0 0 52 52">
+          <circle class="ring-bg" cx="26" cy="26" r="22" fill="none" stroke-width="5"/>
+          <circle class="ring-fill" cx="26" cy="26" r="22" fill="none" stroke-width="5"
+            stroke="${ringColor}"
+            style="stroke-dashoffset:${ringOffset}"/>
+        </svg>
+        <div class="score-text">${score}%</div>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-bold text-indigo-900">POV Match</span>
+          <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-200/60 text-indigo-800">Size ${rec.recommended_size}</span>
+        </div>
+        <p class="text-xs font-medium text-indigo-700 mt-0.5 flex items-center gap-1">
+          <span>🤖</span><span>${conf}% ML Confidence</span>
+        </p>
+        <p class="text-xs text-gray-500 mt-0.5 truncate">${rec.reason || ''}</p>
+      </div>
+    </div>
+    ${culturalHTML}`;
+
+  // Animate section in
+  requestAnimationFrame(() => {
+    section.classList.add('loaded');
+  });
+}
+
+// ── Infinite scroll via IntersectionObserver ──────────────────────────────────
+
+function setupInfiniteScroll() {
+  const sentinel = document.getElementById('scrollSentinel');
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && hasMore && !isLoading) {
+      loadProducts(currentPage + 1);
+    }
+  }, { rootMargin: '300px' });
+  observer.observe(sentinel);
+}
+
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  setupInfiniteScroll();
+  loadProducts(1);
+});
 
 // ══════════════════════════════════════
 // FIT WITH POV
@@ -691,21 +895,18 @@ function renderPovResult(data) {
   const score = Math.round(data.fit_score);
   const conf = Math.round(data.confidence * 100);
 
-  // Score ring
   document.getElementById('resultScore').textContent = score + '%';
   document.getElementById('bigScoreText').textContent = score + '%';
   const ringFill = document.getElementById('bigRingFill');
   const circumference = 207;
   ringFill.style.strokeDashoffset = circumference - (circumference * score / 100);
-  const ringColor = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444';
-  ringFill.style.stroke = ringColor;
+  ringFill.style.stroke = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444';
 
   document.getElementById('resultSize').textContent = data.recommended_size;
   document.getElementById('resultConfPct').textContent = conf + '%';
   document.getElementById('resultConfBar').style.width = conf + '%';
   document.getElementById('resultReason').textContent = data.reason;
 
-  // Cultural Stylist block
   const cultBlock = document.getElementById('culturalStylistBlock');
   if (data.cultural_rationale) {
     cultBlock.classList.remove('hidden');
@@ -721,7 +922,6 @@ function renderPovResult(data) {
     cultBlock.classList.add('hidden');
   }
 
-  // Fit predictions
   const predsDiv = document.getElementById('fitPredictions');
   predsDiv.innerHTML = '';
   const labelMap = { good: ['✓ Good', 'fit-good'], slightly_tight: ['↔ Slightly Tight', 'fit-tight'], slightly_loose: ['↔ Slightly Loose', 'fit-loose'] };
@@ -730,7 +930,6 @@ function renderPovResult(data) {
     predsDiv.innerHTML += `<span class="fit-badge ${cls}">${region}: ${label}</span>`;
   }
 
-  // Explanations
   const exList = document.getElementById('resultExplanations');
   exList.innerHTML = '';
   for (const ex of (data.explanation || [])) {
@@ -787,9 +986,7 @@ function renderComparisonMetrics(data) {
   tbody.innerHTML = '';
 
   const stdMap = {};
-  (data.standard_recommendations || []).forEach(item => {
-    stdMap[item.product_id] = item;
-  });
+  (data.standard_recommendations || []).forEach(item => { stdMap[item.product_id] = item; });
 
   (data.qloo_recommendations || []).forEach(qItem => {
     const sItem = stdMap[qItem.product_id] || {};
@@ -865,7 +1062,6 @@ function startVTO(pid, name, img, category) {
     if (!json.success) {
       document.getElementById('vtoLoading').classList.add('hidden');
       if (json.action === 'upload_photo') {
-        // Show inline upload prompt — do NOT navigate away
         document.getElementById('vtoUploadPrompt').style.display = 'flex';
         document.getElementById('vtoUploadPrompt').classList.remove('hidden');
       } else {
@@ -911,9 +1107,7 @@ function pollVTOStatus(taskId, fallbackImg) {
           showVTOResult(fallbackImg, vtoUserPhotoUrl, true, data.message || 'Live AI try-on error — showing preview overlay.');
         }
       })
-      .catch(() => {
-        // Continue polling on transient network glitch
-      });
+      .catch(() => { /* Continue polling on transient glitch */ });
   }, 2000);
 }
 
@@ -924,7 +1118,7 @@ function uploadVTOPhoto(event) {
 
   const progressWrap = document.getElementById('vtoUploadProgress');
   const progressFill = document.getElementById('vtoUploadFill');
-  const statusText = document.getElementById('vtoUploadStatus');
+  const statusText   = document.getElementById('vtoUploadStatus');
 
   progressWrap.classList.remove('hidden');
   statusText.textContent = 'Uploading…';
@@ -948,7 +1142,6 @@ function uploadVTOPhoto(event) {
       if (json.success) {
         statusText.textContent = '✓ Photo uploaded!';
         vtoUserPhotoUrl = json.photo_url;
-        // Auto-retry the try-on with the new photo
         setTimeout(() => {
           progressWrap.classList.add('hidden');
           document.getElementById('vtoUploadPrompt').classList.add('hidden');
@@ -972,20 +1165,17 @@ function showVTOResult(garmentUrl, userPhotoUrl, isSandbox, sandboxNote) {
   document.getElementById('vtoLoading').classList.add('hidden');
 
   if (isSandbox && userPhotoUrl) {
-    // Composite mode: show user photo + garment overlay
     document.getElementById('vtoUserPhoto').src = userPhotoUrl;
     document.getElementById('vtoGarmentImg').src = garmentUrl;
     document.getElementById('vtoGarmentOverlay').classList.remove('hidden');
     document.getElementById('vtoResultImg').classList.add('hidden');
     document.getElementById('vtoSandboxNote').classList.remove('hidden');
   } else if (isSandbox) {
-    // No user photo — just show the garment on its own
     document.getElementById('vtoUserPhoto').src = garmentUrl;
     document.getElementById('vtoGarmentOverlay').classList.add('hidden');
     document.getElementById('vtoResultImg').classList.add('hidden');
     document.getElementById('vtoSandboxNote').classList.remove('hidden');
   } else {
-    // Live API result
     document.getElementById('vtoResultImg').src = garmentUrl;
     document.getElementById('vtoResultImg').classList.remove('hidden');
     document.getElementById('vtoUserPhoto').src = userPhotoUrl || '';
@@ -998,20 +1188,15 @@ function showVTOResult(garmentUrl, userPhotoUrl, isSandbox, sandboxNote) {
 }
 
 function closeVTO() {
-  // Stop any in-progress polling
   if (vtoPollInterval) { clearInterval(vtoPollInterval); vtoPollInterval = null; }
 
-  // Hide the panel
   document.getElementById('vtoPanel').classList.remove('open');
   document.body.style.overflow = '';
 
-  // ── Reset all inner panel states so next open starts clean ──
-  // Clear image sources to prevent flash of old content
   document.getElementById('vtoUserPhoto').src = '';
   document.getElementById('vtoGarmentImg').src = '';
   document.getElementById('vtoResultImg').src = '';
 
-  // Reset sub-panel visibility
   document.getElementById('vtoLoading').classList.remove('hidden');
   document.getElementById('vtoResult').classList.add('hidden');
   document.getElementById('vtoUploadPrompt').classList.add('hidden');
@@ -1022,7 +1207,6 @@ function closeVTO() {
   document.getElementById('vtoSandboxNote').classList.add('hidden');
   document.getElementById('vtoResultImg').classList.add('hidden');
 
-  // Reset wardrobe button state
   const wardrobeBtn = document.getElementById('vtoAddWardrobeBtn');
   if (wardrobeBtn) {
     wardrobeBtn.disabled = false;
@@ -1031,7 +1215,6 @@ function closeVTO() {
     wardrobeBtn.classList.add('bg-white', 'text-black');
   }
 
-  // Reset upload progress
   const uploadProgress = document.getElementById('vtoUploadProgress');
   if (uploadProgress) uploadProgress.classList.add('hidden');
   const uploadFill = document.getElementById('vtoUploadFill');
@@ -1042,7 +1225,7 @@ function closeVTO() {
 // ADD TO WARDROBE
 // ══════════════════════════════════════
 function addToWardrobe() {
-  const btn = document.getElementById('vtoAddWardrobeBtn');
+  const btn  = document.getElementById('vtoAddWardrobeBtn');
   const size = currentPovResult ? currentPovResult.recommended_size : 'M';
   btn.disabled = true;
   btn.textContent = 'Adding…';
