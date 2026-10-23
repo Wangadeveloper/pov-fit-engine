@@ -231,6 +231,28 @@
       </div>
     </div>
 
+    {% if not taste_saved and current_user.is_authenticated %}
+    <!-- ── Taste Nudge Banner (disappears once profile taste is saved) ── -->
+    <div id="tasteNudgeBanner" class="mb-6 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-purple-200/40 relative overflow-hidden">
+      <!-- Decorative glow -->
+      <div class="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full pointer-events-none"></div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-xl">✨</div>
+        <div>
+          <p class="font-bold text-white text-sm leading-tight mb-0.5">Unlock your personalised catalogue</p>
+          <p class="text-purple-200 text-xs leading-relaxed max-w-md">
+            Tell POV your style — once saved, your catalogue re-sorts by <strong class="text-white">Qloo Cultural Match %</strong> so the pieces that truly fit your vibe rise to the top.
+          </p>
+        </div>
+      </div>
+      <a href="{{ url_for('fit.onboarding') }}"
+         class="flex-shrink-0 bg-white text-purple-700 font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-purple-50 transition-colors flex items-center gap-2 shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+        Set Up My POV →
+      </a>
+    </div>
+    {% endif %}
+
     <!-- Product Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="productGrid">
       <!-- Skeleton cards shown while first page loads -->
@@ -592,8 +614,9 @@
 // ══════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════
-const SHOP_MODE = '{{ current_mode }}';
-const PER_PAGE  = 20;
+const SHOP_MODE  = '{{ current_mode }}';
+const TASTE_SAVED = {{ 'true' if taste_saved else 'false' }};
+const PER_PAGE   = 20;
 
 // ══════════════════════════════════════
 // STATE
@@ -619,10 +642,10 @@ function buildCardHTML(p) {
   const price = Number(p.price).toFixed(2);
 
   return `
-  <div class="product-card" id="card-${pid}" data-pid="${pid}">
+  <div class="product-card" id="card-${pid}" data-pid="${pid}" data-pov-score="0">
     <!-- Image -->
     <div class="card-img-wrap">
-      <span class="card-badge hidden pov-badge-${pid}">✦ POV Ready</span>
+      <span class="card-badge hidden pov-badge-${pid}">${TASTE_SAVED ? '✦ Your Vibe' : '✦ POV Ready'}</span>
       ${p.image_url
         ? `<img src="${p.image_url}" alt="${esc(p.name)}" loading="lazy">`
         : `<div class="flex items-center justify-center h-full text-gray-300">
@@ -744,8 +767,11 @@ async function loadProducts(page) {
       document.getElementById('endOfCatalog').style.display = 'block';
     }
 
-    // Lazily fetch POV scores for this batch of products
-    loadPovScores(newIds);
+    if (TASTE_SAVED) {
+      // Lazily fetch POV scores then re-sort grid by Qloo POV% descending
+      loadPovScores(newIds);
+    }
+    // For new users (no taste saved), we show a clean unscored catalogue — no fetch needed
 
   } catch (err) {
     loadingMore.style.display = 'none';
@@ -758,7 +784,7 @@ async function loadProducts(page) {
 // ── Lazy POV score injection ──────────────────────────────────────────────────
 
 async function loadPovScores(ids) {
-  if (!ids.length) return;
+  if (!ids.length || !TASTE_SAVED) return;
 
   try {
     const res = await fetch(`/shop/api/pov-scores?ids=${ids.join(',')}&mode=${SHOP_MODE}`);
@@ -768,6 +794,13 @@ async function loadPovScores(ids) {
     for (const [pid, rec] of Object.entries(json.scores)) {
       injectPovScore(pid, rec);
     }
+
+    // Re-sort the grid by Qloo POV% descending so best cultural matches rise to top
+    const grid = document.getElementById('productGrid');
+    const cards = Array.from(grid.querySelectorAll('[data-pid]'));
+    cards.sort((a, b) => Number(b.dataset.povScore || 0) - Number(a.dataset.povScore || 0));
+    cards.forEach(c => grid.appendChild(c));
+
   } catch (e) {
     // Silently fail — shop still works without scores
   }
@@ -783,7 +816,11 @@ function injectPovScore(pid, rec) {
   const ringColor  = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444';
   const showMode   = SHOP_MODE !== 'standard';
 
-  // Show "POV Ready" badge
+  // Stamp score on card for grid re-sort
+  const card = document.getElementById(`card-${pid}`);
+  if (card) card.dataset.povScore = score;
+
+  // Show "Your Vibe" badge (only for taste-saved users — guard already handled by TASTE_SAVED)
   const badge = document.querySelector(`.pov-badge-${pid}`);
   if (badge) badge.classList.remove('hidden');
 

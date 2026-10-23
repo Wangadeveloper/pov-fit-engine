@@ -168,9 +168,10 @@ class QlooService:
         interests = profile.get("cultural_interests", [])
         aesthetic = (profile.get("aesthetic_preference") or "casual").lower().strip()
         occasions = profile.get("occasions", [])
+        style_expression = (profile.get("style_expression") or "").lower().strip()
 
-        # Normalize aesthetic key
-        matched_aesthetic = self._resolve_aesthetic(aesthetic, interests)
+        # Normalize aesthetic key (style_expression acts as tertiary nudge)
+        matched_aesthetic = self._resolve_aesthetic(aesthetic, interests, style_expression)
         cluster = CULTURAL_TASTE_PROFILES.get(matched_aesthetic, CULTURAL_TASTE_PROFILES["casual"])
 
         # Feature matching score
@@ -242,8 +243,12 @@ class QlooService:
 
     # ── Internal Sandbox Helpers ───────────────────────────────────────────
 
-    def _resolve_aesthetic(self, aesthetic: str, interests: List[str]) -> str:
-        """Find the closest aesthetic cluster using aesthetic name and music interests."""
+    def _resolve_aesthetic(self, aesthetic: str, interests: List[str], style_expression: str = "") -> str:
+        """Find the closest aesthetic cluster using aesthetic name, music interests, and style expression.
+        
+        style_expression acts as a soft tertiary signal — it only nudges when a direct
+        aesthetic match or music bridge is unavailable, so it remains zero-pressure.
+        """
         a_clean = (aesthetic or "").lower().strip()
 
         # 1. If explicit specific aesthetic is provided (and not generic fallback 'casual')
@@ -259,7 +264,17 @@ class QlooService:
                 if genre_keyword in i_lower:
                     return target_aesthetic
 
-        # 3. If aesthetic was explicitly casual or matches a profile
+        # 3. Style expression nudge — maps expression to adjacent aesthetics
+        STYLE_EXPRESSION_NUDGE: Dict[str, str] = {
+            "feminine": "quiet luxury",
+            "masculine": "gorpcore",
+            "fluid": "streetwear",
+            "nonbinary": "minimalist",
+        }
+        if style_expression and style_expression in STYLE_EXPRESSION_NUDGE:
+            return STYLE_EXPRESSION_NUDGE[style_expression]
+
+        # 4. If aesthetic was explicitly casual or matches a profile
         if a_clean in CULTURAL_TASTE_PROFILES:
             return a_clean
 
@@ -305,9 +320,10 @@ class QlooService:
         interests: List[str],
         aesthetic: str,
         occasions: List[str],
+        style_expression: str = "",
     ) -> Dict[str, Any]:
         """Simulates Qloo's taste graph response."""
-        resolved = self._resolve_aesthetic(aesthetic, interests)
+        resolved = self._resolve_aesthetic(aesthetic, interests, style_expression)
         cluster = CULTURAL_TASTE_PROFILES[resolved]
 
         return {

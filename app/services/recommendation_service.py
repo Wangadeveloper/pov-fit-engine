@@ -47,6 +47,8 @@ class RecommendationService:
             "aesthetic_preference": getattr(profile, "aesthetic_preference", "casual") or "casual",
             "occasions": getattr(profile, "occasions", []) or [],
             "budget_tier": getattr(profile, "budget_tier", "accessible") or "accessible",
+            # Style expression feeds Qloo aesthetic matching as a personalisation signal
+            "style_expression": getattr(profile, "style_expression", None),
         }
 
     @staticmethod
@@ -73,14 +75,14 @@ class RecommendationService:
                 brand=product.brand
             )
 
-            # Calculate Qloo cultural intelligence resonance
+            # Calculate Qloo cultural intelligence resonance (style_expression included via user_cultural)
             cultural_res = qloo_service.calculate_cultural_resonance(product, user_cultural)
             cultural_score = cultural_res["resonance_score"]
             cultural_rationale = cultural_res["stylist_rationale"]
 
             if recommendation_mode == "qloo_enhanced":
-                # Blended POV score: 50% physical fit + 50% cultural taste resonance
-                composite_score = round((0.50 * rec_data["fit_score"]) + (0.50 * (cultural_score * 100.0)), 1)
+                # Blended POV score: 30% physical fit + 70% Qloo cultural resonance
+                composite_score = round((0.30 * rec_data["fit_score"]) + (0.70 * (cultural_score * 100.0)), 1)
                 combined_explanation = [f"POV Stylist: {cultural_rationale}"] + rec_data["explanation"]
             else:
                 # Standard recommendation (physical fit only)
@@ -180,7 +182,8 @@ class RecommendationService:
         cultural_rationale = cultural_res["stylist_rationale"]
 
         if recommendation_mode == "qloo_enhanced":
-            composite_score = round((0.50 * rec_data["fit_score"]) + (0.50 * (cultural_score * 100.0)), 1)
+            # Blended POV score: 30% physical fit + 70% Qloo cultural resonance
+            composite_score = round((0.30 * rec_data["fit_score"]) + (0.70 * (cultural_score * 100.0)), 1)
             combined_explanation = [f"POV Stylist: {cultural_rationale}"] + rec_data["explanation"]
         else:
             composite_score = rec_data["fit_score"]

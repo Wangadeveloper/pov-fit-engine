@@ -47,6 +47,7 @@ class FitProfileUpdate(BaseModel):
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
     try_on_photo_url: Optional[str] = None
+    style_expression: Optional[str] = None
 
 class OnboardingDetails(BaseModel):
     preferred_top_fit: str
@@ -60,4 +61,5 @@ class OnboardingDetails(BaseModel):
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
     try_on_photo_url: Optional[str] = None
+    style_expression: Optional[str] = None
 

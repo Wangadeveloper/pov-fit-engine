@@ -28,12 +28,30 @@ shop_bp = Blueprint('shop', __name__, url_prefix='/shop')
 @shop_bp.route('/')
 def index():
     """Main shop page – render shell instantly; products + scores load client-side."""
+    from flask_login import current_user
     mode_param = request.args.get('mode', 'qloo').lower()
     rec_mode = 'standard' if mode_param == 'standard' else 'qloo_enhanced'
+
+    # Determine if the user has saved taste preferences (enables sorted + scored catalogue)
+    taste_saved = False
+    if current_user.is_authenticated:
+        try:
+            from app.services.fit_service import FitService
+            profile = FitService.get_or_create_profile(db, current_user.id)
+            has_aesthetic = bool(
+                profile.aesthetic_preference and
+                profile.aesthetic_preference.lower() != 'casual'
+            )
+            has_cultural = bool(profile.cultural_interests and len(profile.cultural_interests) > 0)
+            taste_saved = has_aesthetic or has_cultural
+        except Exception:
+            taste_saved = False
+
     return render_template(
         'shop/index.html',
         current_mode=mode_param,
         rec_mode=rec_mode,
+        taste_saved=taste_saved,
     )
 
 

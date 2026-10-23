@@ -30,6 +30,7 @@ def onboarding():
                 budget_tier=request.form.get('budget_tier', 'accessible'),
                 height_cm=float(request.form['height_cm']) if request.form.get('height_cm') else None,
                 weight_kg=float(request.form['weight_kg']) if request.form.get('weight_kg') else None,
+                style_expression=request.form.get('style_expression') or None,
             )
             FitService.save_onboarding(db, current_user.id, data)
             flash('Your POV Cultural Fit Profile has been updated!', 'success')

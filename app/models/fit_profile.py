@@ -20,6 +20,9 @@ class FitProfile(db.Model):
     aesthetic_preference: Mapped[str] = mapped_column(String(100), default="casual")
     occasions: Mapped[list[str]] = mapped_column(JSON, default=list)
     budget_tier: Mapped[str] = mapped_column(String(50), default="accessible")
+    # Style expression — inclusive self-identification used as a Qloo personalisation signal.
+    # Options: masculine / feminine / fluid / nonbinary / undisclosed
+    style_expression: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
     
     height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)

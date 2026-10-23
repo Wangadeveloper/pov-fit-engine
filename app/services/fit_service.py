@@ -78,6 +78,8 @@ class FitService:
         profile.budget_tier = data.budget_tier
         profile.height_cm = data.height_cm
         profile.weight_kg = data.weight_kg
+        if data.style_expression is not None:
+            profile.style_expression = data.style_expression
         
         FitService.recalculate_metrics(db, profile)
         db.session.add(profile)
