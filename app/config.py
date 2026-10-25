@@ -36,3 +36,12 @@ class Config:
     ML_MIN_CONFIDENCE = float(os.environ.get("ML_MIN_CONFIDENCE", "0.55"))
     # Percentage of requests routed to ML/hybrid (0–100). 100 = all users.
     ML_ROLLOUT_PERCENTAGE = int(os.environ.get("ML_ROLLOUT_PERCENTAGE", "100"))
+
+    # ── Gemini Agentic Intelligence Layer ─────────────────────────────────────
+    # Set GEMINI_AGENT_ENABLED=false to bypass Gemini entirely (deterministic-only mode)
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_AGENT_ENABLED = os.environ.get("GEMINI_AGENT_ENABLED", "true").lower() in ("true", "1", "yes")
+    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+    GEMINI_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_TIMEOUT_SECONDS", "15"))
+    # Max retries on transient errors only — quota errors skip retry immediately
+    GEMINI_MAX_RETRIES = int(os.environ.get("GEMINI_MAX_RETRIES", "1"))

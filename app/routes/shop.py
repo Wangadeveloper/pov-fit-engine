@@ -206,6 +206,11 @@ def api_fit_analysis(product_id):
     Returns POV fit analysis for a product as JSON.
     Called by the "Fit with POV" button on product cards.
     Requires authentication; returns JSON 401 for guests.
+
+    When GEMINI_AGENT_ENABLED=true the response is enriched with a Gemini
+    reasoning layer (gemini_explanation + agent_status).  If Gemini fails
+    for any reason the deterministic result is returned unchanged with
+    agent_status='fallback'.
     """
     auth_err = _require_auth()
     if auth_err:
@@ -213,9 +218,37 @@ def api_fit_analysis(product_id):
     try:
         data = request.get_json() or {}
         mode = data.get('mode') or request.args.get('mode', 'qloo_enhanced')
+        trace_id = data.get('trace_id') or request.headers.get('X-Trace-ID')
+
+        # ── 1. Run the full deterministic POV pipeline (unchanged) ────────────
         analysis = RecommendationService.get_recommendation_for_product(
             db, current_user.id, product_id, recommendation_mode=mode
         )
+
+        # ── 2. Optionally enrich with Gemini reasoning (additive only) ────────
+        try:
+            from app.services.pov_agent_service import POVAgentService
+            from app.services.fit_service import FitService
+
+            # Load product + profile for Gemini evidence (already cached in db session)
+            profile = FitService.get_or_create_profile(db, current_user.id)
+            stmt = (
+                select(Product)
+                .where(Product.id == product_id)
+                .options(selectinload(Product.brand), selectinload(Product.variants))
+            )
+            product = db.session.execute(stmt).scalars().first()
+
+            analysis = POVAgentService.enrich(
+                analysis,
+                profile=profile,
+                product=product,
+                trace_id=trace_id,
+            )
+        except Exception:
+            # Safety net: Gemini enrichment must NEVER break the core response
+            pass
+
         return jsonify({"success": True, "data": analysis})
     except ValueError as e:
         return jsonify({"success": False, "error": str(e)}), 404
