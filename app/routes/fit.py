@@ -33,7 +33,7 @@ def onboarding():
             )
             FitService.save_onboarding(db, current_user.id, data)
             flash('Your POV Cultural Fit Profile has been updated!', 'success')
-            return redirect(url_for('shop.index'))
+            return redirect(url_for('shop.index', refreshed='1'))
         except Exception as e:
             flash(f'Error saving profile: {e}', 'danger')
 

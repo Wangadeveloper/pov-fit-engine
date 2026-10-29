@@ -51,6 +51,49 @@ def index():
 
 
 # ──────────────────────────────────────────────
+# API: Current user's fit-profile summary
+# ──────────────────────────────────────────────
+
+@shop_bp.route('/api/fit-profile-summary')
+def api_fit_profile_summary():
+    """
+    Returns the current user's POV profile metadata as JSON so the shop page
+    can display a live Confidence Banner and decide whether to sort by score.
+
+    Always succeeds — returns sensible defaults for profiles with no data yet.
+    """
+    try:
+        from app.services.fit_service import FitService
+        profile = FitService.get_or_create_profile(db, current_user.id)
+
+        has_aesthetic = bool(
+            profile.aesthetic_preference and
+            profile.aesthetic_preference.lower() != 'casual'
+        )
+        has_cultural = bool(profile.cultural_interests and len(profile.cultural_interests) > 0)
+        taste_saved = has_aesthetic or has_cultural
+
+        return jsonify({
+            "success": True,
+            "confidence": round(profile.confidence * 100),
+            "profile_completeness": round(profile.profile_completeness * 100),
+            "calibration_level": profile.calibration_level,
+            "aesthetic_preference": profile.aesthetic_preference or "casual",
+            "cultural_interests": profile.cultural_interests or [],
+            "taste_saved": taste_saved,
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "confidence": 25,
+            "profile_completeness": 0,
+            "calibration_level": "low",
+            "taste_saved": False,
+        })
+
+
+# ──────────────────────────────────────────────
 # API: Paginated product listing  (no POV scores)
 # ──────────────────────────────────────────────
 

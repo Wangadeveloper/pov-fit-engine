@@ -1,4 +1,4 @@
-from flask import Flask, request as flask_request
+from flask import Flask, request as flask_request, session as flask_session
 from flask_login import login_user
 from .config import Config
 from .extensions import db, login_manager
@@ -6,9 +6,11 @@ from .extensions import db, login_manager
 # ── Review-mode flag ──────────────────────────────────────────────────────────
 # Set to True to bypass all authentication (demo / review builds).
 # Flip to False to restore normal login-required behaviour.
+#
+# Per-session isolation: when AUTH_DISABLED is True every browser session gets
+# its own unique demo user (demo-<uuid>@pov.app) stored in the Flask session
+# cookie. Profiles are therefore completely isolated per session/browser.
 AUTH_DISABLED = True
-DEMO_USER_EMAIL = "demo@pov.app"
-DEMO_USER_PASSWORD = "pov-demo-2024"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -26,8 +28,6 @@ def create_app(config_class=Config):
         try:
             db.create_all()
             _init_db_data()
-            if AUTH_DISABLED:
-                _ensure_demo_user()
         except Exception as e:
             app.logger.error(f"Database initialization error: {e}")
     
@@ -57,30 +57,61 @@ def create_app(config_class=Config):
         except (ValueError, TypeError):
             return None
 
-    # ── Review-mode: auto-login demo user on every request ───────────────────
+    # ── Review-mode: auto-login per-session demo user on every request ────────
+    # Each browser session gets its own isolated User row so that fit-profile
+    # updates in one window/tab never bleed into another.
     if AUTH_DISABLED:
         @app.before_request
-        def auto_login_demo_user():
+        def auto_login_session_user():
             from flask_login import current_user
             if not current_user.is_authenticated:
-                demo = db.session.query(User).filter_by(email=DEMO_USER_EMAIL).first()
-                if demo:
-                    login_user(demo, remember=True)
+                user = _get_or_create_session_user()
+                if user:
+                    login_user(user, remember=True)
     # ─────────────────────────────────────────────────────────────────────────
         
     return app
 
 
-def _ensure_demo_user():
-    """Create the demo user account if it doesn't already exist."""
+def _get_or_create_session_user():
+    """
+    Return (and if needed create) a User that is unique to this browser session.
+
+    The user's UUID is persisted in the Flask session cookie under the key
+    'demo_user_id'.  On the very first visit a new User row is inserted with
+    email demo-<uuid>@pov.app.  On subsequent requests the same row is reused,
+    giving every browser tab/window its own isolated fit profile.
+    """
+    import uuid as _uuid
     import bcrypt
     from .models.user import User
-    demo = db.session.query(User).filter_by(email=DEMO_USER_EMAIL).first()
-    if not demo:
-        hashed = bcrypt.hashpw(DEMO_USER_PASSWORD.encode(), bcrypt.gensalt()).decode()
-        demo = User(email=DEMO_USER_EMAIL, hashed_password=hashed)
-        db.session.add(demo)
+
+    raw_id = flask_session.get('demo_user_id')
+
+    # Try to load an existing session user
+    if raw_id:
+        try:
+            uid = _uuid.UUID(raw_id)
+            user = db.session.get(User, uid)
+            if user:
+                return user
+        except (ValueError, TypeError):
+            pass
+
+    # Create a brand-new user for this session
+    new_id = _uuid.uuid4()
+    email = f"demo-{new_id.hex[:12]}@pov.app"
+    hashed = bcrypt.hashpw(b"session-demo", bcrypt.gensalt()).decode()
+    user = User(id=new_id, email=email, hashed_password=hashed)
+    db.session.add(user)
+    try:
         db.session.commit()
+        flask_session['demo_user_id'] = str(new_id)
+        flask_session.permanent = True
+    except Exception:
+        db.session.rollback()
+        return None
+    return user
 
 
 def _init_db_data():
