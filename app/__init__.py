@@ -155,6 +155,14 @@ def _init_db_data():
                 if 'recommendation_type' not in ev_cols:
                     conn.execute(text("ALTER TABLE recommendation_events ADD COLUMN recommendation_type VARCHAR(50) DEFAULT 'qloo_enhanced'"))
                 conn.commit()
+
+            # Check products
+            prod_res = conn.execute(text("PRAGMA table_info(products)")).fetchall()
+            prod_cols = [r[1] for r in prod_res]
+            if prod_cols:
+                if 'target_gender' not in prod_cols:
+                    conn.execute(text("ALTER TABLE products ADD COLUMN target_gender VARCHAR(20) NOT NULL DEFAULT 'unisex'"))
+                conn.commit()
     except Exception:
         pass
 

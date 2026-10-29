@@ -23,6 +23,9 @@ class Product(db.Model):
     color_family: Mapped[str] = mapped_column(String(50), default="neutral")  # neutral, bold, dark, light
     visual_density: Mapped[str] = mapped_column(String(50), default="minimal")  # minimal, detailed
     fabric_drape: Mapped[str | None] = mapped_column(String(50), nullable=True)  # stiff, fluid, heavy
+    # Gender audience: unisex | masculine | feminine | fluid
+    # Used for catalogue filtering when user sets a style_expression in their fit profile.
+    target_gender: Mapped[str] = mapped_column(String(20), default="unisex")
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
