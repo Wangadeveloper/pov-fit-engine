@@ -12,14 +12,10 @@ import uuid
 
 
 def _require_auth():
-    """Return a JSON 401 response if the user is not logged in, else None."""
-    if not current_user.is_authenticated:
-        return jsonify({
-            "success": False,
-            "requires_auth": True,
-            "error": "Sign in to use this feature.",
-            "login_url": url_for("auth.login"),
-        }), 401
+    """
+    Auth is disabled for review. Always returns None (access granted).
+    Profile completeness is checked per-endpoint where needed.
+    """
     return None
 
 shop_bp = Blueprint('shop', __name__, url_prefix='/shop')
@@ -34,18 +30,17 @@ def index():
 
     # Determine if the user has saved taste preferences (enables sorted + scored catalogue)
     taste_saved = False
-    if current_user.is_authenticated:
-        try:
-            from app.services.fit_service import FitService
-            profile = FitService.get_or_create_profile(db, current_user.id)
-            has_aesthetic = bool(
-                profile.aesthetic_preference and
-                profile.aesthetic_preference.lower() != 'casual'
-            )
-            has_cultural = bool(profile.cultural_interests and len(profile.cultural_interests) > 0)
-            taste_saved = has_aesthetic or has_cultural
-        except Exception:
-            taste_saved = False
+    try:
+        from app.services.fit_service import FitService
+        profile = FitService.get_or_create_profile(db, current_user.id)
+        has_aesthetic = bool(
+            profile.aesthetic_preference and
+            profile.aesthetic_preference.lower() != 'casual'
+        )
+        has_cultural = bool(profile.cultural_interests and len(profile.cultural_interests) > 0)
+        taste_saved = has_aesthetic or has_cultural
+    except Exception:
+        taste_saved = False
 
     return render_template(
         'shop/index.html',

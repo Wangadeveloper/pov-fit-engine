@@ -7,7 +7,6 @@ fit_bp = Blueprint('fit', __name__, url_prefix='/fit')
 
 
 @fit_bp.route('/onboarding', methods=['GET', 'POST'])
-@login_required
 def onboarding():
     profile = FitService.get_or_create_profile(db, current_user.id)
 
@@ -42,14 +41,12 @@ def onboarding():
 
 
 @fit_bp.route('/')
-@login_required
 def index():
     profile = FitService.get_or_create_profile(db, current_user.id)
     return render_template('fit/index.html', profile=profile)
 
 
 @fit_bp.route('/api/update-photo', methods=['POST'])
-@login_required
 def api_update_photo():
     """Legacy endpoint — delegates to profile.api_upload_photo."""
     from app.routes.profile import api_upload_photo

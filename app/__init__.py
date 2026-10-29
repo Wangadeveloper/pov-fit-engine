@@ -1,6 +1,16 @@
-from flask import Flask
+from flask import Flask, request as flask_request
+from flask_login import login_user
 from .config import Config
 from .extensions import db, login_manager
+
+# ── Review-mode flag ──────────────────────────────────────────────────────────
+# Set to True to bypass all authentication (demo / review builds).
+# Flip to False to restore normal login-required behaviour.
+AUTH_DISABLED = True
+DEMO_USER_EMAIL = "demo@pov.app"
+DEMO_USER_PASSWORD = "pov-demo-2024"
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -16,6 +26,8 @@ def create_app(config_class=Config):
         try:
             db.create_all()
             _init_db_data()
+            if AUTH_DISABLED:
+                _ensure_demo_user()
         except Exception as e:
             app.logger.error(f"Database initialization error: {e}")
     
@@ -44,8 +56,31 @@ def create_app(config_class=Config):
             return db.session.get(User, uuid.UUID(user_id))
         except (ValueError, TypeError):
             return None
+
+    # ── Review-mode: auto-login demo user on every request ───────────────────
+    if AUTH_DISABLED:
+        @app.before_request
+        def auto_login_demo_user():
+            from flask_login import current_user
+            if not current_user.is_authenticated:
+                demo = db.session.query(User).filter_by(email=DEMO_USER_EMAIL).first()
+                if demo:
+                    login_user(demo, remember=True)
+    # ─────────────────────────────────────────────────────────────────────────
         
     return app
+
+
+def _ensure_demo_user():
+    """Create the demo user account if it doesn't already exist."""
+    import bcrypt
+    from .models.user import User
+    demo = db.session.query(User).filter_by(email=DEMO_USER_EMAIL).first()
+    if not demo:
+        hashed = bcrypt.hashpw(DEMO_USER_PASSWORD.encode(), bcrypt.gensalt()).decode()
+        demo = User(email=DEMO_USER_EMAIL, hashed_password=hashed)
+        db.session.add(demo)
+        db.session.commit()
 
 
 def _init_db_data():

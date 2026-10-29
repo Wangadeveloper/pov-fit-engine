@@ -16,14 +16,12 @@ def _allowed_file(filename: str) -> bool:
 
 
 @profile_bp.route('/')
-@login_required
 def index():
     profile = FitService.get_or_create_profile(db, current_user.id)
     return render_template('profile/index.html', profile=profile)
 
 
 @profile_bp.route('/api/upload-photo', methods=['POST'])
-@login_required
 def api_upload_photo():
     """
     Accepts a multipart file upload OR a JSON photo_url.

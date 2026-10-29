@@ -216,7 +216,6 @@
       </div>
 
       <div class="flex items-center gap-2.5">
-        {% if current_user.is_authenticated %}
         <button onclick="openComparisonModal()"
           class="text-xs font-semibold px-3.5 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors flex items-center gap-1.5 shadow-sm">
           <span>📊</span>
@@ -227,11 +226,10 @@
           <span>🎨</span>
           <span>Update Cultural Tastes</span>
         </a>
-        {% endif %}
       </div>
     </div>
 
-    {% if not taste_saved and current_user.is_authenticated %}
+    {% if not taste_saved %}
     <!-- ── Taste Nudge Banner (disappears once profile taste is saved) ── -->
     <div id="tasteNudgeBanner" class="mb-6 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-purple-200/40 relative overflow-hidden">
       <!-- Decorative glow -->
